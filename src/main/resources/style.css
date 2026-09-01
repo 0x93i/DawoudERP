@@ -1,0 +1,223 @@
+* {
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ── الألوان الأساسية ── */
+.root {
+    -bg-primary: #ffffff;
+    -bg-secondary: #f5f5f3;
+    -bg-tertiary: #eeecea;
+    -green: #3B6D11;
+    -green-bg: #EAF3DE;
+    -text-primary: #1a1a18;
+    -text-secondary: #5f5e5a;
+    -border: rgba(0,0,0,0.12);
+    -fx-node-orientation: right-to-left;
+}
+
+/* ── الـ Sidebar ── */
+.sidebar {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 200px;
+    -fx-max-width: 200px;
+}
+
+.sidebar-logo {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3B6D11;
+    -fx-padding: 16px;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+}
+
+.nav-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #888780;
+    -fx-padding: 8 16 4 16;
+}
+
+.nav-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #5f5e5a;
+    -fx-font-size: 13px;
+    -fx-alignment: CENTER-RIGHT;
+    -fx-padding: 8 16;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+    -fx-border-width: 0 3 0 0;
+    -fx-border-color: transparent;
+}
+
+.nav-btn:hover {
+    -fx-background-color: #f5f5f3;
+    -fx-text-fill: #1a1a18;
+}
+
+.nav-btn-active {
+    -fx-background-color: #EAF3DE;
+    -fx-text-fill: #3B6D11;
+    -fx-font-weight: bold;
+    -fx-border-color: #3B6D11;
+    -fx-border-width: 0 3 0 0;
+}
+
+/* ── الـ Topbar ── */
+.topbar {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+    -fx-min-height: 50px;
+    -fx-max-height: 50px;
+    -fx-padding: 0 20;
+}
+
+.topbar-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a1a18;
+}
+
+/* ── الـ Content ── */
+.content-area {
+    -fx-background-color: #eeecea;
+    -fx-padding: 20px;
+}
+
+/* ── الـ Cards ── */
+.card {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 4, 0, 0, 1);
+}
+
+.card-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a1a18;
+}
+
+/* ── الأزرار ── */
+.btn-primary {
+    -fx-background-color: #3B6D11;
+    -fx-text-fill: white;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 7 13;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #27500A;
+}
+
+.btn-default {
+    -fx-background-color: white;
+    -fx-text-fill: #1a1a18;
+    -fx-border-color: #c0c0c0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 7 13;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.btn-default:hover {
+    -fx-background-color: #f5f5f3;
+}
+
+.btn-danger {
+    -fx-background-color: #FCEBEB;
+    -fx-text-fill: #A32D2D;
+    -fx-border-color: #F7C1C1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 7 13;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+/* ── الـ Labels ── */
+.label-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a1a18;
+}
+
+.label-section {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #888780;
+}
+
+.label-balance-positive {
+    -fx-text-fill: #3B6D11;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.label-balance-negative {
+    -fx-text-fill: #A32D2D;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+/* ── الـ TextFields ── */
+.form-input {
+    -fx-background-color: #f5f5f3;
+    -fx-border-color: #c0c0c0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 7 10;
+    -fx-font-size: 13px;
+}
+
+.form-input:focused {
+    -fx-border-color: #3B6D11;
+    -fx-background-color: white;
+}
+
+/* ── الـ ListView ── */
+.list-view {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.list-cell {
+    -fx-padding: 10 16;
+    -fx-font-size: 13px;
+    -fx-border-color: transparent transparent #f0f0f0 transparent;
+}
+
+.list-cell:selected {
+    -fx-background-color: #EAF3DE;
+    -fx-text-fill: #3B6D11;
+}
+
+/* ── الـ Badge ── */
+.badge-online {
+    -fx-background-color: #EAF3DE;
+    -fx-text-fill: #3B6D11;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 9;
+    -fx-background-radius: 6px;
+}
+
+.badge-admin {
+    -fx-background-color: #EEEDFE;
+    -fx-text-fill: #534AB7;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 9;
+    -fx-background-radius: 6px;
+}

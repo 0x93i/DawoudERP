@@ -1,0 +1,204 @@
+أيوه، كده أقدر أحدد المشكلة بشكل أفضل. راجعت الـ `pom.xml`، وفيه نقطة أساسية:
+
+**الـ `pom.xml` الحالي لا يعمل Installer أصلًا.**
+هو فقط يعمل Maven run، ويبني JAR، وينسخ الـ dependencies إلى `target/libs`.
+
+يعني عندك حاليًا:
+
+```text
+mvn javafx:run
+        ↓
+JavaFX Maven Plugin
+        ↓
+يشغل المشروع من Maven
+        ↓
+يشتغل ✅
+```
+
+لكن الـ Installer الذي كنت تعمله سابقًا بـ `jpackage` **غير موجود في الـ POM الذي أرسلته**.
+
+## المشكلة في الـ POM الحالي
+
+عندك:
+
+```xml
+<plugin>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-maven-plugin</artifactId>
+    <version>0.0.8</version>
+    <configuration>
+        <mainClass>com.daoud.Main</mainClass>
+    </configuration>
+</plugin>
+```
+
+وده مسؤول عن:
+
+```bash
+mvn javafx:run
+```
+
+وعندك:
+
+```xml
+<maven-jar-plugin>
+```
+
+وده يبني:
+
+```text
+target/daoud-app.jar
+```
+
+وعندك:
+
+```xml
+<maven-dependency-plugin>
+```
+
+وده ينسخ الـ dependencies إلى:
+
+```text
+target/libs/
+```
+
+لكن **مفيش أي `jpackage` هنا**.
+
+---
+
+# والأهم: JavaFX
+
+أنت تستخدم:
+
+```xml
+<javafx.version>21.0.2</javafx.version>
+```
+
+والـ Maven run عندك بالفعل ظهر فيه:
+
+```text
+javafx-graphics-21.0.2-win.jar
+```
+
+وده طبيعي لأن Maven عند تشغيل:
+
+```bash
+mvn javafx:run
+```
+
+يعرف مكان الـ JavaFX modules والـ dependencies.
+
+لكن الـ EXE المثبت لازم يكون عنده Runtime مناسب ويعرف مكان كل الـ modules والـ libraries.
+
+---
+
+# أنا أقترح نعمل Installer بالطريقة الصحيحة
+
+بدل ما نعتمد على Java الموجود عند جهاز العميل، نخلي:
+
+```text
+Daoud ERP.exe
+       │
+       ├── Java Runtime
+       ├── JavaFX
+       ├── PostgreSQL JDBC
+       ├── HikariCP
+       └── Application
+```
+
+وبالتالي العميل **لا يحتاج يثبت Java**.
+
+وده بالضبط السبب اللي كنا بنحاول نعمله باستخدام `jpackage`.
+
+---
+
+# لكن قبل ما أديك POM جديد
+
+فيه حاجة أريد نتأكد منها أولًا.
+
+أنت قلت:
+
+> لما بثبته و افتحه مش بيشتغل أصلاً
+
+هل الـ Installer الذي عندك حاليًا معمول بالفعل باستخدام `jpackage`؟
+
+لو **آه**، ابعتلي **الـ command أو الـ configuration اللي استخدمته لعمل الـ installer**.
+
+مثلاً لو كنت بتعمل:
+
+```bash
+jpackage ...
+```
+
+ابعتلي الأمر كامل.
+
+أو لو Claude أضاف لك Plugin في `pom.xml` ثم حذفته/غيرته، ابعتلي النسخة القديمة لو موجودة.
+
+لأن الـ `pom.xml` الحالي **لا يحتوي على أي إعداد لإنشاء الـ EXE**، وبالتالي لازم نعرف بالضبط كيف تم إنشاء الـ EXE الذي لا يعمل.
+
+---
+
+## وفيه اختبار سريع جدًا ممكن يحسم المشكلة
+
+من داخل مجلد المشروع شغل:
+
+```bash
+mvn clean package
+```
+
+بعدها شوف:
+
+```text
+target/
+```
+
+المفروض تلاقي تقريبًا:
+
+```text
+target/
+├── classes/
+├── libs/
+│   ├── HikariCP-5.1.0.jar
+│   ├── postgresql-42.7.3.jar
+│   ├── javafx-controls-21.0.2.jar
+│   └── ...
+└── daoud-app.jar
+```
+
+ثم جرّب:
+
+```bash
+java -jar target/daoud-app.jar
+```
+
+لو ده **لم يعمل**، فالمشكلة في الـ JAR/dependencies.
+
+لو ده **اشتغل**، يبقى المشكلة تحديدًا في `jpackage` / الـ installer.
+
+---
+
+### ملاحظة مهمة جدًا
+
+أنت لم تعد تحتاج:
+
+```xml
+<dependency>
+    <groupId>org.xerial</groupId>
+    <artifactId>sqlite-jdbc</artifactId>
+    <version>3.45.1.0</version>
+</dependency>
+```
+
+إذا كان المشروع أصبح Online بالكامل ولا يوجد أي كود ما زال يستخدم SQLite.
+
+لكن **لا نحذفها الآن** قبل ما نعمل Search في المشروع عن:
+
+```text
+jdbc:sqlite
+```
+
+لأن ممكن يكون فيه جزء من البرنامج لسه يعتمد عليها.
+
+---
+
+**الخلاصة:** الـ Online database والـ Login عندك وصلنا فيهم لمرحلة كويسة؛ المشكلة الجديدة هي الـ packaging. ابعتلي **طريقة/أمر إنشاء الـ installer الحالي** أو صورة من مجلد الـ installer، ونبني الـ EXE بطريقة صحيحة بدل ما نغير حاجات عشوائيًا.

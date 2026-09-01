@@ -1,0 +1,5 @@
+مل Rebuild / Package للمشروع في IntelliJ.
+
+انسخ الـ JAR الجديد لـ target/libs.
+
+شغّل أمر jpackage برقم إصدار جديد (مثلاً 1.9).

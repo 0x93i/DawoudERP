@@ -1,0 +1,1 @@
+jpackage --type msi --name "DawoudERP" --app-version "1.3" --runtime-image target\runtime --input target\libs --main-jar daoud-app.jar --main-class com.daoud.Main --dest target\installer --win-shortcut --win-menu --win-dir-chooser --win-upgrade-uuid "12345678-1234-1234-1234-123456789012"

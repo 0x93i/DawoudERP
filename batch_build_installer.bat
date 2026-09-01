@@ -1,0 +1,1 @@
+jpackage --type exe --name "DawoudERP" --app-version "1.2" --vendor "Dawoud" --input target/libs --main-jar ../daoud-app.jar --main-class com.daoud.Main --dest target/installer --win-shortcut --win-menu --win-dir-chooser --java-options "--add-opens=java.base/java.lang=ALL-UNNAMED"3
