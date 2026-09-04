@@ -164,122 +164,863 @@ public class ShipmentsContent {
         }
     }
 
+//    private static void showAddDialog(int userId, VBox tableBox) {
+//        List<Supplier> suppliers = SupplierDAO.getAllSuppliers();
+//        List<Factory> factories = FactoryDAO.getAllFactories();
+//
+//        ComboBox<Supplier> supplierCombo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
+//        supplierCombo.setPromptText("اختار المورد");
+//
+//        ComboBox<Factory> factoryCombo = new ComboBox<>(FXCollections.observableArrayList(factories));
+//        factoryCombo.setPromptText("اختار المصنع");
+//
+//        TextField grossField = new TextField(); grossField.setPromptText("الوزن الإجمالي (كيلو)");
+//        TextField deductionField = new TextField(); deductionField.setPromptText("خصم الوزن (كيلو)");
+//        TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
+//
+//        Label netWeightLbl = new Label("الوزن الصافي: —");
+//        Label totalLbl = new Label("الإجمالي: —");
+//
+//        // مصاريف التشغيل
+//        TextField loadingField = new TextField("0"); loadingField.setPromptText("تحميل");
+//        TextField workersField = new TextField("0"); workersField.setPromptText("عمال");
+//        TextField fuelField = new TextField("0"); fuelField.setPromptText("بنزين");
+//        TextField transportField = new TextField("0"); transportField.setPromptText("نقل");
+//        TextField otherField = new TextField("0"); otherField.setPromptText("أخرى");
+//        Label profitLbl = new Label("صافي الربح: —");
+//
+//        Runnable calc = () -> {
+//            try {
+//                double gross = Double.parseDouble(grossField.getText().trim());
+//                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+//                double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
+//                double net = gross - ded;
+//                double total = net * price;
+//                double costs = parseD(loadingField) + parseD(workersField) + parseD(fuelField) + parseD(transportField) + parseD(otherField);
+//                netWeightLbl.setText(String.format("الوزن الصافي: %.1f كيلو", net));
+//                totalLbl.setText(String.format("الإجمالي: %.0f جنيه", total));
+//                profitLbl.setText(String.format("صافي الربح: %.0f جنيه", total - costs));
+//                profitLbl.setStyle("-fx-font-weight: bold; -fx-text-fill: " + ((total - costs) >= 0 ? "#3B6D11" : "#A32D2D") + ";");
+//            } catch (NumberFormatException ex) {
+//                netWeightLbl.setText("الوزن الصافي: —");
+//            }
+//        };
+//
+//        grossField.textProperty().addListener((o,old,n) -> calc.run());
+//        deductionField.textProperty().addListener((o,old,n) -> calc.run());
+//        priceField.textProperty().addListener((o,old,n) -> calc.run());
+//        loadingField.textProperty().addListener((o,old,n) -> calc.run());
+//        workersField.textProperty().addListener((o,old,n) -> calc.run());
+//        fuelField.textProperty().addListener((o,old,n) -> calc.run());
+//        transportField.textProperty().addListener((o,old,n) -> calc.run());
+//        otherField.textProperty().addListener((o,old,n) -> calc.run());
+//
+//        Button saveBtn = new Button("حفظ الشحنة"); saveBtn.getStyleClass().add("btn-primary");
+//        Label errLbl = new Label("");
+//
+//        VBox layout = new VBox(10,
+//                new Label("المورد:"), supplierCombo,
+//                new Label("المصنع:"), factoryCombo,
+//                new Label("الوزن الإجمالي (كيلو):"), grossField,
+//                new Label("خصم الوزن (كيلو):"), deductionField,
+//                new Label("سعر الكيلو:"), priceField,
+//                netWeightLbl, totalLbl,
+//                new Separator(),
+//                new Label("مصاريف التشغيل:"),
+//                new HBox(8, new VBox(4, new Label("تحميل:"), loadingField),
+//                        new VBox(4, new Label("عمال:"), workersField),
+//                        new VBox(4, new Label("بنزين:"), fuelField)),
+//                new HBox(8, new VBox(4, new Label("نقل:"), transportField),
+//                        new VBox(4, new Label("أخرى:"), otherField)),
+//                profitLbl,
+//                saveBtn, errLbl
+//        );
+//        layout.setPadding(new Insets(20));
+//
+//        Stage dialog = DialogHelper.create("شحنة جديدة", layout, 480, 580);
+//
+//        saveBtn.setOnAction(e -> {
+//            if (supplierCombo.getValue() == null || factoryCombo.getValue() == null) {
+//                errLbl.setText("اختار المورد والمصنع"); return;
+//            }
+//            try {
+//                double gross = Double.parseDouble(grossField.getText().trim());
+//                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+//                double price = Double.parseDouble(priceField.getText().trim());
+//                double net = gross - ded;
+//                double total = net * price;
+//
+//                String num = generateShipmentNumber();
+//                String sql = """
+//                    INSERT INTO shipments (shipment_number, supplier_id, factory_id, shipment_date,
+//                        gross_weight, deduction_kg, net_weight, price_per_kg, total_amount,
+//                        cost_loading, cost_workers, cost_fuel, cost_transport, cost_other,
+//                        status, recorded_by)
+//                    VALUES (?, ?, ?, date('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+//                """;
+//                try (Connection conn = DatabaseManager_online.getConnection();
+//                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                    stmt.setString(1, num);
+//                    stmt.setInt(2, supplierCombo.getValue().getId());
+//                    stmt.setInt(3, factoryCombo.getValue().getId());
+//                    stmt.setDouble(4, gross); stmt.setDouble(5, ded);
+//                    stmt.setDouble(6, net); stmt.setDouble(7, price);
+//                    stmt.setDouble(8, total);
+//                    stmt.setDouble(9, parseD(loadingField)); stmt.setDouble(10, parseD(workersField));
+//                    stmt.setDouble(11, parseD(fuelField)); stmt.setDouble(12, parseD(transportField));
+//                    stmt.setDouble(13, parseD(otherField));
+//                    stmt.setInt(14, userId);
+//                    stmt.executeUpdate();
+//                }
+//                loadShipments(tableBox, "all");
+//                dialog.close();
+//            } catch (NumberFormatException ex) { errLbl.setText("تأكد من الأرقام");
+//            } catch (SQLException ex) { errLbl.setText("خطأ: " + ex.getMessage()); }
+//        });
+//
+//        dialog.show();
+//    }
+
+
     private static void showAddDialog(int userId, VBox tableBox) {
+
         List<Supplier> suppliers = SupplierDAO.getAllSuppliers();
         List<Factory> factories = FactoryDAO.getAllFactories();
 
-        ComboBox<Supplier> supplierCombo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
+        // =========================
+        // المورد والمصنع
+        // =========================
+
+        ComboBox<Supplier> supplierCombo =
+                new ComboBox<>(FXCollections.observableArrayList(suppliers));
         supplierCombo.setPromptText("اختار المورد");
 
-        ComboBox<Factory> factoryCombo = new ComboBox<>(FXCollections.observableArrayList(factories));
+        ComboBox<Factory> factoryCombo =
+                new ComboBox<>(FXCollections.observableArrayList(factories));
         factoryCombo.setPromptText("اختار المصنع");
 
-        TextField grossField = new TextField(); grossField.setPromptText("الوزن الإجمالي (كيلو)");
-        TextField deductionField = new TextField(); deductionField.setPromptText("خصم الوزن (كيلو)");
-        TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
 
-        Label netWeightLbl = new Label("الوزن الصافي: —");
-        Label totalLbl = new Label("الإجمالي: —");
+        // =========================
+        // بيانات الشراء من المورد
+        // =========================
 
+        TextField supplierGrossField = new TextField();
+        supplierGrossField.setPromptText("الوزن الإجمالي عند المورد (كيلو)");
+
+        TextField supplierDeductionField = new TextField();
+        supplierDeductionField.setPromptText("خصم المورد (كيلو)");
+
+        TextField purchasePriceField = new TextField();
+        purchasePriceField.setPromptText("سعر الشراء / كيلو");
+
+
+        Label supplierNetLbl =
+                new Label("صافي وزن المورد: —");
+
+        Label purchaseTotalLbl =
+                new Label("إجمالي الشراء: —");
+
+
+        // =========================
+        // بيانات البيع للمصنع
+        // =========================
+
+        TextField factoryGrossField = new TextField();
+        factoryGrossField.setPromptText("الوزن الإجمالي عند المصنع (كيلو)");
+
+        TextField factoryDeductionField = new TextField();
+        factoryDeductionField.setPromptText("خصم المصنع (كيلو)");
+
+        TextField salePriceField = new TextField();
+        salePriceField.setPromptText("سعر البيع / كيلو");
+
+
+        Label factoryNetLbl =
+                new Label("صافي وزن المصنع: —");
+
+        Label saleTotalLbl =
+                new Label("إجمالي البيع: —");
+
+
+        // =========================
+        // الأرباح
+        // =========================
+
+        Label grossProfitLbl =
+                new Label("مجمل الربح: —");
+
+        Label netProfitLbl =
+                new Label("صافي الربح: —");
+
+
+        // =========================
         // مصاريف التشغيل
-        TextField loadingField = new TextField("0"); loadingField.setPromptText("تحميل");
-        TextField workersField = new TextField("0"); workersField.setPromptText("عمال");
-        TextField fuelField = new TextField("0"); fuelField.setPromptText("بنزين");
-        TextField transportField = new TextField("0"); transportField.setPromptText("نقل");
-        TextField otherField = new TextField("0"); otherField.setPromptText("أخرى");
-        Label profitLbl = new Label("صافي الربح: —");
+        // =========================
+
+        TextField loadingField = new TextField("0");
+        loadingField.setPromptText("تحميل");
+
+        TextField workersField = new TextField("0");
+        workersField.setPromptText("عمال");
+
+        TextField fuelField = new TextField("0");
+        fuelField.setPromptText("بنزين");
+
+        TextField transportField = new TextField("0");
+        transportField.setPromptText("نقل");
+
+        TextField otherField = new TextField("0");
+        otherField.setPromptText("أخرى");
+
+
+        // =========================
+        // الحسابات
+        // =========================
 
         Runnable calc = () -> {
+
             try {
-                double gross = Double.parseDouble(grossField.getText().trim());
-                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
-                double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
-                double net = gross - ded;
-                double total = net * price;
-                double costs = parseD(loadingField) + parseD(workersField) + parseD(fuelField) + parseD(transportField) + parseD(otherField);
-                netWeightLbl.setText(String.format("الوزن الصافي: %.1f كيلو", net));
-                totalLbl.setText(String.format("الإجمالي: %.0f جنيه", total));
-                profitLbl.setText(String.format("صافي الربح: %.0f جنيه", total - costs));
-                profitLbl.setStyle("-fx-font-weight: bold; -fx-text-fill: " + ((total - costs) >= 0 ? "#3B6D11" : "#A32D2D") + ";");
-            } catch (NumberFormatException ex) {
-                netWeightLbl.setText("الوزن الصافي: —");
+
+                // -------- المورد --------
+
+                double supplierGross =
+                        parseD(supplierGrossField);
+
+                double supplierDeduction =
+                        parseD(supplierDeductionField);
+
+                double purchasePrice =
+                        parseD(purchasePriceField);
+
+                double supplierNet =
+                        supplierGross - supplierDeduction;
+
+                if (supplierNet < 0) {
+                    supplierNet = 0;
+                }
+
+                double purchaseTotal =
+                        supplierNet * purchasePrice;
+
+
+                // -------- المصنع --------
+
+                double factoryGross =
+                        parseD(factoryGrossField);
+
+                double factoryDeduction =
+                        parseD(factoryDeductionField);
+
+                double salePrice =
+                        parseD(salePriceField);
+
+                double factoryNet =
+                        factoryGross - factoryDeduction;
+
+                if (factoryNet < 0) {
+                    factoryNet = 0;
+                }
+
+                double saleTotal =
+                        factoryNet * salePrice;
+
+
+                // -------- المصاريف --------
+
+                double costs =
+                        parseD(loadingField)
+                                + parseD(workersField)
+                                + parseD(fuelField)
+                                + parseD(transportField)
+                                + parseD(otherField);
+
+
+                // -------- الأرباح --------
+
+                double grossProfit =
+                        saleTotal - purchaseTotal;
+
+                double netProfit =
+                        grossProfit - costs;
+
+
+                // =========================
+                // عرض النتائج
+                // =========================
+
+                supplierNetLbl.setText(
+                        String.format(
+                                "صافي وزن المورد: %.1f كيلو",
+                                supplierNet
+                        )
+                );
+
+                purchaseTotalLbl.setText(
+                        String.format(
+                                "إجمالي الشراء: %.0f جنيه",
+                                purchaseTotal
+                        )
+                );
+
+
+                factoryNetLbl.setText(
+                        String.format(
+                                "صافي وزن المصنع: %.1f كيلو",
+                                factoryNet
+                        )
+                );
+
+                saleTotalLbl.setText(
+                        String.format(
+                                "إجمالي البيع: %.0f جنيه",
+                                saleTotal
+                        )
+                );
+
+
+                grossProfitLbl.setText(
+                        String.format(
+                                "مجمل الربح: %.0f جنيه",
+                                grossProfit
+                        )
+                );
+
+                netProfitLbl.setText(
+                        String.format(
+                                "صافي الربح: %.0f جنيه",
+                                netProfit
+                        )
+                );
+
+
+                grossProfitLbl.setStyle(
+                        "-fx-font-weight: bold; -fx-text-fill: "
+                                + (grossProfit >= 0
+                                ? "#3B6D11"
+                                : "#A32D2D")
+                                + ";"
+                );
+
+                netProfitLbl.setStyle(
+                        "-fx-font-weight: bold; -fx-text-fill: "
+                                + (netProfit >= 0
+                                ? "#3B6D11"
+                                : "#A32D2D")
+                                + ";"
+                );
+
+
+            } catch (Exception ex) {
+
+                supplierNetLbl.setText("صافي وزن المورد: —");
+                purchaseTotalLbl.setText("إجمالي الشراء: —");
+
+                factoryNetLbl.setText("صافي وزن المصنع: —");
+                saleTotalLbl.setText("إجمالي البيع: —");
+
+                grossProfitLbl.setText("مجمل الربح: —");
+                netProfitLbl.setText("صافي الربح: —");
             }
         };
 
-        grossField.textProperty().addListener((o,old,n) -> calc.run());
-        deductionField.textProperty().addListener((o,old,n) -> calc.run());
-        priceField.textProperty().addListener((o,old,n) -> calc.run());
-        loadingField.textProperty().addListener((o,old,n) -> calc.run());
-        workersField.textProperty().addListener((o,old,n) -> calc.run());
-        fuelField.textProperty().addListener((o,old,n) -> calc.run());
-        transportField.textProperty().addListener((o,old,n) -> calc.run());
-        otherField.textProperty().addListener((o,old,n) -> calc.run());
 
-        Button saveBtn = new Button("حفظ الشحنة"); saveBtn.getStyleClass().add("btn-primary");
-        Label errLbl = new Label("");
+        // =========================
+        // Listeners
+        // =========================
 
-        VBox layout = new VBox(10,
-                new Label("المورد:"), supplierCombo,
-                new Label("المصنع:"), factoryCombo,
-                new Label("الوزن الإجمالي (كيلو):"), grossField,
-                new Label("خصم الوزن (كيلو):"), deductionField,
-                new Label("سعر الكيلو:"), priceField,
-                netWeightLbl, totalLbl,
+        supplierGrossField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        supplierDeductionField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        purchasePriceField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+
+        factoryGrossField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        factoryDeductionField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        salePriceField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+
+        loadingField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        workersField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        fuelField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        transportField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+        otherField.textProperty()
+                .addListener((o, old, n) -> calc.run());
+
+
+        // =========================
+        // زر الحفظ
+        // =========================
+
+        Button saveBtn =
+                new Button("حفظ الشحنة");
+
+        saveBtn.getStyleClass().add("btn-primary");
+
+        Label errLbl =
+                new Label("");
+
+
+        // =========================
+        // Layout
+        // =========================
+
+        VBox layout = new VBox(
+                10,
+
+                new Label("المورد:"),
+                supplierCombo,
+
+                new Label("المصنع:"),
+                factoryCombo,
+
                 new Separator(),
-                new Label("مصاريف التشغيل:"),
-                new HBox(8, new VBox(4, new Label("تحميل:"), loadingField),
-                        new VBox(4, new Label("عمال:"), workersField),
-                        new VBox(4, new Label("بنزين:"), fuelField)),
-                new HBox(8, new VBox(4, new Label("نقل:"), transportField),
-                        new VBox(4, new Label("أخرى:"), otherField)),
-                profitLbl,
-                saveBtn, errLbl
-        );
-        layout.setPadding(new Insets(20));
 
-        Stage dialog = DialogHelper.create("شحنة جديدة", layout, 480, 580);
+                new Label("━━━ بيانات الشراء من المورد ━━━"),
+
+                new Label("الوزن الإجمالي عند المورد (كيلو):"),
+                supplierGrossField,
+
+                new Label("خصم المورد (كيلو):"),
+                supplierDeductionField,
+
+                new Label("سعر الشراء / كيلو:"),
+                purchasePriceField,
+
+                supplierNetLbl,
+                purchaseTotalLbl,
+
+                new Separator(),
+
+                new Label("━━━ بيانات البيع للمصنع ━━━"),
+
+                new Label("الوزن الإجمالي عند المصنع (كيلو):"),
+                factoryGrossField,
+
+                new Label("خصم المصنع (كيلو):"),
+                factoryDeductionField,
+
+                new Label("سعر البيع / كيلو:"),
+                salePriceField,
+
+                factoryNetLbl,
+                saleTotalLbl,
+
+                new Separator(),
+
+                new Label("━━━ مصاريف التشغيل ━━━"),
+
+                new HBox(
+                        8,
+                        new VBox(4,
+                                new Label("تحميل:"),
+                                loadingField
+                        ),
+                        new VBox(4,
+                                new Label("عمال:"),
+                                workersField
+                        ),
+                        new VBox(4,
+                                new Label("بنزين:"),
+                                fuelField
+                        )
+                ),
+
+                new HBox(
+                        8,
+                        new VBox(4,
+                                new Label("نقل:"),
+                                transportField
+                        ),
+                        new VBox(4,
+                                new Label("أخرى:"),
+                                otherField
+                        )
+                ),
+
+                new Separator(),
+
+                grossProfitLbl,
+                netProfitLbl,
+
+                saveBtn,
+                errLbl
+        );
+
+        layout.setPadding(new Insets(20));
+        ScrollPane scrollPane = new ScrollPane(layout);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(false);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        VBox scrollContainer = new VBox(scrollPane);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+//        Stage dialog =
+//                DialogHelper.create(
+//                        "شحنة جديدة",
+//                        layout,
+//                        500,
+//                        750
+//                );
+        Stage dialog =
+                DialogHelper.create(
+                        "شحنة جديدة",
+                        scrollContainer,
+                        500,
+                        650
+                );
+
+        // =========================
+        // حفظ الشحنة
+        // =========================
 
         saveBtn.setOnAction(e -> {
-            if (supplierCombo.getValue() == null || factoryCombo.getValue() == null) {
-                errLbl.setText("اختار المورد والمصنع"); return;
-            }
-            try {
-                double gross = Double.parseDouble(grossField.getText().trim());
-                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
-                double price = Double.parseDouble(priceField.getText().trim());
-                double net = gross - ded;
-                double total = net * price;
 
-                String num = generateShipmentNumber();
+            if (supplierCombo.getValue() == null) {
+                errLbl.setText("اختار المورد");
+                return;
+            }
+
+            if (factoryCombo.getValue() == null) {
+                errLbl.setText("اختار المصنع");
+                return;
+            }
+
+
+            try {
+
+                // -------- بيانات المورد --------
+
+                double supplierGross =
+                        Double.parseDouble(
+                                supplierGrossField.getText().trim()
+                        );
+
+                double supplierDeduction =
+                        supplierDeductionField.getText().trim().isEmpty()
+                                ? 0
+                                : Double.parseDouble(
+                                supplierDeductionField.getText().trim()
+                        );
+
+                double purchasePrice =
+                        Double.parseDouble(
+                                purchasePriceField.getText().trim()
+                        );
+
+                double supplierNet =
+                        supplierGross - supplierDeduction;
+
+
+                if (supplierNet < 0) {
+                    errLbl.setText(
+                            "خصم المورد لا يمكن أن يكون أكبر من الوزن الإجمالي"
+                    );
+                    return;
+                }
+
+
+                double purchaseTotal =
+                        supplierNet * purchasePrice;
+
+
+                // -------- بيانات المصنع --------
+
+                double factoryGross =
+                        Double.parseDouble(
+                                factoryGrossField.getText().trim()
+                        );
+
+                double factoryDeduction =
+                        factoryDeductionField.getText().trim().isEmpty()
+                                ? 0
+                                : Double.parseDouble(
+                                factoryDeductionField.getText().trim()
+                        );
+
+                double salePrice =
+                        Double.parseDouble(
+                                salePriceField.getText().trim()
+                        );
+
+                double factoryNet =
+                        factoryGross - factoryDeduction;
+
+
+                if (factoryNet < 0) {
+                    errLbl.setText(
+                            "خصم المصنع لا يمكن أن يكون أكبر من الوزن الإجمالي"
+                    );
+                    return;
+                }
+
+
+                double saleTotal =
+                        factoryNet * salePrice;
+
+
+                // -------- المصاريف --------
+
+                double costLoading =
+                        parseD(loadingField);
+
+                double costWorkers =
+                        parseD(workersField);
+
+                double costFuel =
+                        parseD(fuelField);
+
+                double costTransport =
+                        parseD(transportField);
+
+                double costOther =
+                        parseD(otherField);
+
+
+                double totalCosts =
+                        costLoading
+                                + costWorkers
+                                + costFuel
+                                + costTransport
+                                + costOther;
+
+
+                // -------- الأرباح --------
+
+                double grossProfit =
+                        saleTotal - purchaseTotal;
+
+                double netProfit =
+                        grossProfit - totalCosts;
+
+
+                // -------- رقم الشحنة --------
+
+                String num =
+                        generateShipmentNumber();
+
+
+                // =========================
+                // INSERT PostgreSQL
+                // =========================
+
                 String sql = """
-                    INSERT INTO shipments (shipment_number, supplier_id, factory_id, shipment_date,
-                        gross_weight, deduction_kg, net_weight, price_per_kg, total_amount,
-                        cost_loading, cost_workers, cost_fuel, cost_transport, cost_other,
-                        status, recorded_by)
-                    VALUES (?, ?, ?, date('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                INSERT INTO shipments (
+                    shipment_number,
+                    supplier_id,
+                    factory_id,
+                    shipment_date,
+
+                    gross_weight,
+                    deduction_kg,
+                    net_weight,
+                    price_per_kg,
+                    total_amount,
+
+                    purchase_price_per_kg,
+                    purchase_total,
+
+                    factory_gross_weight,
+                    factory_deduction_kg,
+                    factory_net_weight,
+
+                    sale_price_per_kg,
+                    sale_total,
+
+                    cost_loading,
+                    cost_workers,
+                    cost_fuel,
+                    cost_transport,
+                    cost_other,
+
+                    gross_profit,
+                    net_profit,
+
+                    status,
+                    recorded_by
+                )
+
+                VALUES (
+                    ?, ?, ?, CURRENT_DATE,
+
+                    ?, ?, ?, ?, ?,
+
+                    ?, ?,
+
+                    ?, ?, ?,
+
+                    ?, ?,
+
+                    ?, ?, ?, ?, ?,
+
+                    ?, ?,
+
+                    'pending',
+                    ?
+                )
                 """;
-                try (Connection conn = DatabaseManager_online.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, num);
-                    stmt.setInt(2, supplierCombo.getValue().getId());
-                    stmt.setInt(3, factoryCombo.getValue().getId());
-                    stmt.setDouble(4, gross); stmt.setDouble(5, ded);
-                    stmt.setDouble(6, net); stmt.setDouble(7, price);
-                    stmt.setDouble(8, total);
-                    stmt.setDouble(9, parseD(loadingField)); stmt.setDouble(10, parseD(workersField));
-                    stmt.setDouble(11, parseD(fuelField)); stmt.setDouble(12, parseD(transportField));
-                    stmt.setDouble(13, parseD(otherField));
-                    stmt.setInt(14, userId);
+
+
+                try (
+                        Connection conn =
+                                DatabaseManager_online.getConnection();
+
+                        PreparedStatement stmt =
+                                conn.prepareStatement(sql)
+                ) {
+
+                    int i = 1;
+
+
+                    stmt.setString(i++, num);
+
+                    stmt.setInt(
+                            i++,
+                            supplierCombo.getValue().getId()
+                    );
+
+                    stmt.setInt(
+                            i++,
+                            factoryCombo.getValue().getId()
+                    );
+
+
+                    // البيانات القديمة
+                    // نحتفظ بها متوافقة مع بيانات المورد
+
+                    stmt.setDouble(i++, supplierGross);
+                    stmt.setDouble(i++, supplierDeduction);
+                    stmt.setDouble(i++, supplierNet);
+                    stmt.setDouble(i++, purchasePrice);
+                    stmt.setDouble(i++, purchaseTotal);
+
+
+                    // بيانات الشراء الجديدة
+
+                    stmt.setDouble(
+                            i++,
+                            purchasePrice
+                    );
+
+                    stmt.setDouble(
+                            i++,
+                            purchaseTotal
+                    );
+
+
+                    // بيانات المصنع
+
+                    stmt.setDouble(
+                            i++,
+                            factoryGross
+                    );
+
+                    stmt.setDouble(
+                            i++,
+                            factoryDeduction
+                    );
+
+                    stmt.setDouble(
+                            i++,
+                            factoryNet
+                    );
+
+
+                    // بيانات البيع
+
+                    stmt.setDouble(
+                            i++,
+                            salePrice
+                    );
+
+                    stmt.setDouble(
+                            i++,
+                            saleTotal
+                    );
+
+
+                    // المصاريف
+
+                    stmt.setDouble(i++, costLoading);
+                    stmt.setDouble(i++, costWorkers);
+                    stmt.setDouble(i++, costFuel);
+                    stmt.setDouble(i++, costTransport);
+                    stmt.setDouble(i++, costOther);
+
+
+                    // الأرباح
+
+                    stmt.setDouble(
+                            i++,
+                            grossProfit
+                    );
+
+                    stmt.setDouble(
+                            i++,
+                            netProfit
+                    );
+
+
+                    // المستخدم
+
+                    stmt.setInt(
+                            i++,
+                            userId
+                    );
+
+
                     stmt.executeUpdate();
                 }
-                loadShipments(tableBox, "all");
+
+
+                // تحديث الجدول
+
+                loadShipments(
+                        tableBox,
+                        "all"
+                );
+
+
                 dialog.close();
-            } catch (NumberFormatException ex) { errLbl.setText("تأكد من الأرقام");
-            } catch (SQLException ex) { errLbl.setText("خطأ: " + ex.getMessage()); }
+
+
+            } catch (NumberFormatException ex) {
+
+                errLbl.setText(
+                        "تأكد إن كل الأوزان والأسعار أرقام صحيحة"
+                );
+
+            } catch (SQLException ex) {
+
+                errLbl.setText(
+                        "خطأ في قاعدة البيانات: "
+                                + ex.getMessage()
+                );
+            }
         });
+
 
         dialog.show();
     }
+
 
     private static void showDetailDialog(int shipId, VBox tableBox, String filter) {
         try (Connection conn = DatabaseManager_online.getConnection()) {
