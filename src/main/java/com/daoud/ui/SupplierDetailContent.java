@@ -112,6 +112,12 @@ record HistoryRow(String type, String date, String net, String amount, String pc
                     stmt.setString(3, method); stmt.setInt(4, userId);
                     stmt.setString(5, withdrawNotes.getText().trim());
                     stmt.executeUpdate();
+                    // تسجيل في خزنة المخزن
+                    int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
+                    int treasuryId = VaultHelper.getWarehouseTreasuryId(warehouseId);
+                    VaultHelper.record(treasuryId, "out",
+                            VaultHelper.toPaymentType(paymentMethodCombo.getValue()),
+                            amount, "سحب مورد: " + supplier.getName(), withdrawNotes.getText().trim(), userId);
                 }
                 withdrawField.clear(); withdrawNotes.clear();
                 withdrawError.setText("تم ✓");

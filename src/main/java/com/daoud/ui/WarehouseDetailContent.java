@@ -128,10 +128,8 @@ public class WarehouseDetailContent {
                 try (Connection conn = DatabaseManager_online.getConnection();
                      PreparedStatement stmt = conn.prepareStatement(supplierSql)) {
                     stmt.setInt(1, supplierCombo.getValue().getId());
-                    stmt.setDouble(2, gross);
-                    stmt.setDouble(3, ded);
-                    stmt.setDouble(4, price);
-                    stmt.setInt(5, userId);
+                    stmt.setDouble(2, gross); stmt.setDouble(3, ded);
+                    stmt.setDouble(4, price); stmt.setInt(5, userId);
                     stmt.executeUpdate();
                 }
 
@@ -150,7 +148,7 @@ public class WarehouseDetailContent {
         TextField exitColoredField = new TextField(); exitColoredField.setPromptText("0");
         TextField exitWhiteField = new TextField(); exitWhiteField.setPromptText("0");
         TextField exitWasteField = new TextField(); exitWasteField.setPromptText("0");
-        TextField exitPriceField = new TextField(); exitPriceField.setPromptText("سعر الكيلو");
+        TextField exitPriceField = new TextField(); exitPriceField.setPromptText("سعر الشراء / كيلو");
 
         List<com.daoud.model.Factory> factories = com.daoud.dao.FactoryDAO.getAllFactories();
         ComboBox<String> destinationCombo = new ComboBox<>();
@@ -162,9 +160,9 @@ public class WarehouseDetailContent {
         destinationCombo.setMaxWidth(Double.MAX_VALUE);
 
         Label exitTotalLabel = new Label("الإجمالي: —");
-        Label exitValueLabel = new Label("القيمة: —");
+        Label exitValueLabel = new Label("قيمة الشراء: —");
         exitTotalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
-        exitValueLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
+        exitValueLabel.setStyle("-fx-text-fill: #888780; -fx-font-size: 12px;");
 
         Runnable calcExit = () -> {
             try {
@@ -174,7 +172,7 @@ public class WarehouseDetailContent {
                 double price = parse(exitPriceField);
                 exitTotalLabel.setText(String.format("الإجمالي: %.1f كيلو", total));
                 exitValueLabel.setText(price > 0 ?
-                        String.format("القيمة: %.2f جنيه", total * price) : "القيمة: —");
+                        String.format("قيمة الشراء: %.2f جنيه", total * price) : "قيمة الشراء: —");
             } catch (NumberFormatException ex) { exitTotalLabel.setText("الإجمالي: —"); }
         };
 
@@ -192,14 +190,171 @@ public class WarehouseDetailContent {
                 double green = parse(exitGreenField), colored = parse(exitColoredField);
                 double white = parse(exitWhiteField), waste = parse(exitWasteField);
                 double exitPrice = parse(exitPriceField);
-                if (green + colored + white + waste == 0) { exitMsg.setText("ادخل كمية"); return; }
+                double totalKg = green + colored + white + waste;
+                if (totalKg == 0) { exitMsg.setText("ادخل كمية"); return; }
                 if (destinationCombo.getValue() == null) { exitMsg.setText("اختار الوجهة"); return; }
 
                 String destination = destinationCombo.getValue();
+
+                // لو مصنع — افتح dialog لبيانات الشحنة
+                if (destination.startsWith("مصنع: ")) {
+                    String factoryName = destination.replace("مصنع: ", "");
+                    com.daoud.model.Factory targetFactory = null;
+                    for (com.daoud.model.Factory f : factories) {
+                        if (f.getName().equals(factoryName)) { targetFactory = f; break; }
+                    }
+                    if (targetFactory == null) { exitMsg.setText("مصنع غير موجود"); return; }
+
+                    final com.daoud.model.Factory finalFactory = targetFactory;
+                    final double purchaseTotal = totalKg * exitPrice;
+
+                    // ── Dialog بيانات الشحنة ──
+                    TextField factoryGrossField = new TextField(String.valueOf(totalKg));
+                    factoryGrossField.setPromptText("الوزن الإجمالي عند المصنع");
+                    TextField factoryDeductionField = new TextField("0");
+                    factoryDeductionField.setPromptText("خصم المصنع (كيلو)");
+                    TextField sellPriceField = new TextField();
+                    sellPriceField.setPromptText("سعر البيع / كيلو");
+
+                    Label factoryNetLabel = new Label("صافي وزن المصنع: —");
+                    Label sellTotalLabel = new Label("إجمالي البيع: —");
+                    Label grossProfitLabel = new Label("مجمل الربح: —");
+                    Label netProfitLabel = new Label("صافي الربح: —");
+
+                    factoryNetLabel.setStyle("-fx-text-fill: #888780;");
+                    sellTotalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
+
+                    TextField costLoading = new TextField("0"); costLoading.setPromptText("تحميل");
+                    TextField costWorkers = new TextField("0"); costWorkers.setPromptText("عمال");
+                    TextField costFuel = new TextField("0"); costFuel.setPromptText("بنزين");
+                    TextField costTransport = new TextField("0"); costTransport.setPromptText("نقل");
+                    TextField costOther = new TextField("0"); costOther.setPromptText("أخرى");
+
+                    Runnable calcShipment = () -> {
+                        try {
+                            double fGross = Double.parseDouble(factoryGrossField.getText().trim());
+                            double fDed = parseField(factoryDeductionField);
+                            double sellPrice = sellPriceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(sellPriceField.getText().trim());
+                            double fNet = fGross - fDed;
+                            double sellTotal = fNet * sellPrice;
+                            double costs = parseField(costLoading) + parseField(costWorkers) +
+                                    parseField(costFuel) + parseField(costTransport) + parseField(costOther);
+                            double grossProfit = sellTotal - purchaseTotal;
+                            double netProfit = grossProfit - costs;
+
+                            factoryNetLabel.setText(String.format("صافي وزن المصنع: %.2f كيلو", fNet));
+                            sellTotalLabel.setText(String.format("إجمالي البيع: %.2f جنيه", sellTotal));
+                            grossProfitLabel.setText(String.format("مجمل الربح: %.2f جنيه", grossProfit));
+                            grossProfitLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (grossProfit >= 0 ? "#3B6D11" : "#A32D2D") + ";");
+                            netProfitLabel.setText(String.format("صافي الربح: %.2f جنيه", netProfit));
+                            netProfitLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (netProfit >= 0 ? "#3B6D11" : "#A32D2D") + ";");
+                        } catch (NumberFormatException ex) {
+                            factoryNetLabel.setText("صافي وزن المصنع: —");
+                        }
+                    };
+
+                    factoryGrossField.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    factoryDeductionField.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    sellPriceField.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    costLoading.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    costWorkers.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    costFuel.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    costTransport.textProperty().addListener((o,old,n) -> calcShipment.run());
+                    costOther.textProperty().addListener((o,old,n) -> calcShipment.run());
+
+                    Button saveShipBtn = new Button("حفظ الشحنة"); saveShipBtn.getStyleClass().add("btn-primary");
+                    Label shipErr = new Label("");
+
+                    saveShipBtn.setOnAction(ev -> {
+                        try {
+                            double fGross = Double.parseDouble(factoryGrossField.getText().trim());
+                            double fDed = parseField(factoryDeductionField);
+                            double sellPrice = Double.parseDouble(sellPriceField.getText().trim());
+                            double fNet = fGross - fDed;
+                            double sellTotal = fNet * sellPrice;
+                            double costs = parseField(costLoading) + parseField(costWorkers) +
+                                    parseField(costFuel) + parseField(costTransport) + parseField(costOther);
+                            double netProfit = (sellTotal - purchaseTotal) - costs;
+
+                            // تسجيل في warehouse_stock_exits
+                            String exitSql = "INSERT INTO warehouse_stock_exits " +
+                                    "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(exitSql)) {
+                                stmt.setInt(1, warehouse.getId());
+                                stmt.setDouble(2, green); stmt.setDouble(3, colored);
+                                stmt.setDouble(4, white); stmt.setDouble(5, waste);
+                                stmt.setString(6, destination);
+                                stmt.setDouble(7, exitPrice);
+                                stmt.setDouble(8, totalKg * exitPrice);
+                                stmt.setInt(9, userId);
+                                stmt.executeUpdate();
+                            }
+
+                            // تسجيل في factory_shipments
+                            String shipSql = "INSERT INTO factory_shipments " +
+                                    "(factory_id, shipment_date, gross_weight, deduction_kg, net_weight, price_per_kg, total_amount, " +
+                                    "purchase_total, cost_loading, cost_workers, cost_fuel, cost_transport, cost_other, net_profit, source, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'warehouse', ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(shipSql)) {
+                                stmt.setInt(1, finalFactory.getId());
+                                stmt.setDouble(2, fGross); stmt.setDouble(3, fDed);
+                                stmt.setDouble(4, fNet); stmt.setDouble(5, sellPrice);
+                                stmt.setDouble(6, sellTotal); stmt.setDouble(7, purchaseTotal);
+                                stmt.setDouble(8, parseField(costLoading)); stmt.setDouble(9, parseField(costWorkers));
+                                stmt.setDouble(10, parseField(costFuel)); stmt.setDouble(11, parseField(costTransport));
+                                stmt.setDouble(12, parseField(costOther)); stmt.setDouble(13, netProfit);
+                                stmt.setInt(14, userId);
+                                stmt.executeUpdate();
+                            }
+
+                            exitGreenField.clear(); exitColoredField.clear();
+                            exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
+                            exitTotalLabel.setText("الإجمالي: —");
+                            exitValueLabel.setText("قيمة الشراء: —");
+                            exitMsg.setText("تم تسجيل الشحنة ✓");
+                            refreshStockCard(stockCard, warehouse.getId());
+                            ((Stage) saveShipBtn.getScene().getWindow()).close();
+
+                        } catch (NumberFormatException ex) { shipErr.setText("تأكد من الأرقام");
+                        } catch (SQLException ex) { shipErr.setText("خطأ: " + ex.getMessage()); }
+                    });
+
+                    VBox shipLayout = new VBox(10,
+                            new Label("--- بيانات البيع للمصنع ---"),
+                            new Label(String.format("قيمة الشراء: %.2f جنيه", purchaseTotal)),
+                            new Separator(),
+                            new Label("الوزن الإجمالي عند المصنع:"), factoryGrossField,
+                            new Label("خصم المصنع (كيلو):"), factoryDeductionField,
+                            new Label("سعر البيع / كيلو:"), sellPriceField,
+                            factoryNetLabel, sellTotalLabel,
+                            new Separator(),
+                            new Label("--- مصاريف التشغيل ---"),
+                            new HBox(8,
+                                    new VBox(4, new Label("تحميل:"), costLoading),
+                                    new VBox(4, new Label("عمال:"), costWorkers),
+                                    new VBox(4, new Label("بنزين:"), costFuel)),
+                            new HBox(8,
+                                    new VBox(4, new Label("نقل:"), costTransport),
+                                    new VBox(4, new Label("أخرى:"), costOther)),
+                            new Separator(),
+                            grossProfitLabel, netProfitLabel,
+                            saveShipBtn, shipErr);
+                    shipLayout.setPadding(new Insets(20));
+
+                    ScrollPane scroll = new ScrollPane(shipLayout);
+                    scroll.setFitToWidth(true);
+                    VBox dialogBox = new VBox(scroll);
+                    DialogHelper.create("بيانات الشحنة: " + finalFactory.getName(), dialogBox, 420, 580).show();
+                    return;
+                }
+
+                // لو عم داود — سجل مباشرة
                 String sql = "INSERT INTO warehouse_stock_exits " +
                         "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
                         "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
-                double totalKg = green + colored + white + waste;
                 try (Connection conn = DatabaseManager_online.getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, warehouse.getId());
@@ -212,35 +367,13 @@ public class WarehouseDetailContent {
                     stmt.executeUpdate();
                 }
 
-                // لو مصنع — سجل شحنة تلقائي
-                if (destination.startsWith("مصنع: ")) {
-                    String factoryName = destination.replace("مصنع: ", "");
-                    for (com.daoud.model.Factory f : factories) {
-                        if (f.getName().equals(factoryName)) {
-                            String shipSql = "INSERT INTO factory_shipments " +
-                                    "(factory_id, shipment_date, gross_weight, deduction_pct, deduction_kg, net_weight, price_per_kg, total_amount, recorded_by) " +
-                                    "VALUES (?, CURRENT_DATE, ?, 0, 0, ?, ?, ?, ?)";
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(shipSql)) {
-                                stmt.setInt(1, f.getId());
-                                stmt.setDouble(2, totalKg);
-                                stmt.setDouble(3, totalKg);
-                                stmt.setDouble(4, exitPrice);
-                                stmt.setDouble(5, totalKg * exitPrice);
-                                stmt.setInt(6, userId);
-                                stmt.executeUpdate();
-                            }
-                            break;
-                        }
-                    }
-                }
-
                 exitGreenField.clear(); exitColoredField.clear();
                 exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
                 exitTotalLabel.setText("الإجمالي: —");
-                exitValueLabel.setText("القيمة: —");
+                exitValueLabel.setText("قيمة الشراء: —");
                 exitMsg.setText("تم ✓");
                 refreshStockCard(stockCard, warehouse.getId());
+
             } catch (NumberFormatException ex) { exitMsg.setText("تأكد من الأرقام");
             } catch (SQLException ex) { exitMsg.setText("خطأ: " + ex.getMessage()); }
         });
@@ -301,7 +434,7 @@ public class WarehouseDetailContent {
                         new VBox(4, new Label("ألوان (كيلو):"), exitColoredField),
                         new VBox(4, new Label("أبيض (كيلو):"), exitWhiteField),
                         new VBox(4, new Label("زبالة (كيلو):"), exitWasteField)),
-                new VBox(4, new Label("سعر الكيلو:"), exitPriceField),
+                new VBox(4, new Label("سعر الشراء / كيلو:"), exitPriceField),
                 new VBox(4, new Label("الوجهة:"), destinationCombo),
                 new HBox(16, exitTotalLabel, exitValueLabel),
                 saveExitBtn, exitMsg);
@@ -452,6 +585,11 @@ public class WarehouseDetailContent {
     }
 
     private static double parse(TextField f) {
+        try { return f.getText().trim().isEmpty() ? 0 : Double.parseDouble(f.getText().trim()); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    private static double parseField(TextField f) {
         try { return f.getText().trim().isEmpty() ? 0 : Double.parseDouble(f.getText().trim()); }
         catch (NumberFormatException e) { return 0; }
     }

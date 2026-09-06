@@ -56,9 +56,9 @@ public class MainLayout {
                         loadContent(WorkersContent.build(userId, username, role));
                     }),
                     navSection("حسابات"),
-                    navBtn("العهد", () -> {
-                        setTitle("العهد");
-                        loadContent(CustodyContent.build(userId, username, role));
+                    navBtn("الخزنة", () -> {
+                        setTitle("الخزنة");
+                        loadContent(VaultsContent.build(userId, username, role));
                     }),
                     navBtn("إدارة المستخدمين", () -> {
                         setTitle("إدارة المستخدمين");
@@ -71,6 +71,10 @@ public class MainLayout {
                     navBtn("المخازن", () -> {
                         setTitle("المخازن");
                         loadContent(WarehousesContent.build(stage, userId, username, role));
+                    }),
+                    navBtn("الخزنة", () -> {
+                        setTitle("الخزنة");
+                        loadContent(VaultsContent.build(userId, username, role));
                     }),
                     navSection("الأشخاص"),
                     navBtn("العمال", () -> {
