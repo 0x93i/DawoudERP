@@ -20,7 +20,6 @@ public class WarehouseDetailContent {
 
     public static Node build(int userId, String username, String role, Warehouse warehouse) {
 
-        System.out.println("DEBUG: Building warehouse detail for warehouse ID = " + warehouse.getId() + " name = " + warehouse.getName());
         // ── إجمالي البضاعة ──
         VBox stockCard = new VBox(10);
         stockCard.getStyleClass().add("card");
@@ -29,30 +28,38 @@ public class WarehouseDetailContent {
 
         // ── قائمة الموردين ──
         List<Supplier> suppliers = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
-        System.out.println("DEBUG: suppliers size = " + suppliers.size());
-        for (Supplier s : suppliers) {
-            System.out.println("DEBUG: supplier = " + s.getName());
-        }
         javafx.collections.ObservableList<Supplier> supplierObsList = FXCollections.observableArrayList(suppliers);
         ListView<Supplier> suppliersList = new ListView<>(supplierObsList);
         suppliersList.setPrefHeight(180);
-        suppliersList.setCellFactory(lv -> new ListCell<Supplier>() {
+        suppliersList.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Supplier item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getName());
             }
         });
-        suppliersList.setPrefHeight(180);
+
         ComboBox<Supplier> supplierCombo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
         supplierCombo.setPromptText("اختار المورد");
         supplierCombo.setMaxWidth(Double.MAX_VALUE);
+        supplierCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Supplier item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        supplierCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Supplier item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
 
-        // زر إضافة مورد جديد لو مش موجود
         Button addNewSupplierBtn = new Button("+ مورد جديد");
         addNewSupplierBtn.getStyleClass().add("btn-default");
         addNewSupplierBtn.setStyle("-fx-font-size: 11px;");
-//        addNewSupplierBtn.setOnAction(e -> showAddSupplierDialog(userId, role, warehouse, supplierCombo, null));
         addNewSupplierBtn.setOnAction(e -> showAddSupplierDialog(userId, role, warehouse, supplierCombo, suppliersList));
 
         HBox supplierRow = new HBox(8, supplierCombo, addNewSupplierBtn);
@@ -103,26 +110,35 @@ public class WarehouseDetailContent {
                 double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
 
-                // تسجيل في المخزن
-//                String sql = "INSERT INTO warehouse_stock_entries (warehouse_id, supplier_id, entry_date, total_weight, recorded_by) VALUES (?, ?, date('now'), ?, ?)";
                 String sql = "INSERT INTO warehouse_stock_entries " +
                         "(warehouse_id, supplier_id, entry_date, total_weight, recorded_by) " +
                         "VALUES (?, ?, CURRENT_DATE, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, warehouse.getId()); stmt.setInt(2, supplierCombo.getValue().getId());
-                    stmt.setDouble(3, gross - ded); stmt.setInt(4, userId); stmt.executeUpdate();
+                try (Connection conn = DatabaseManager_online.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setInt(1, warehouse.getId());
+                    stmt.setInt(2, supplierCombo.getValue().getId());
+                    stmt.setDouble(3, gross - ded);
+                    stmt.setInt(4, userId);
+                    stmt.executeUpdate();
                 }
 
-                // تسجيل في حساب المورد تلقائي
-                String supplierSql = "INSERT INTO supplier_transactions (supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) VALUES (?, date('now'), ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(supplierSql)) {
+                String supplierSql = "INSERT INTO supplier_transactions " +
+                        "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) " +
+                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
+                try (Connection conn = DatabaseManager_online.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(supplierSql)) {
                     stmt.setInt(1, supplierCombo.getValue().getId());
-                    stmt.setDouble(2, gross); stmt.setDouble(3, ded);
-                    stmt.setDouble(4, price); stmt.setInt(5, userId); stmt.executeUpdate();
+                    stmt.setDouble(2, gross);
+                    stmt.setDouble(3, ded);
+                    stmt.setDouble(4, price);
+                    stmt.setInt(5, userId);
+                    stmt.executeUpdate();
                 }
 
                 totalWeightField.clear(); deductionField.clear(); priceField.clear();
-                pctLabel.setText("نسبة الخصم: —"); netLabel.setText("الوزن الصافي: —"); totalLabel.setText("الإجمالي: —");
+                pctLabel.setText("نسبة الخصم: —");
+                netLabel.setText("الوزن الصافي: —");
+                totalLabel.setText("الإجمالي: —");
                 entryMsg.setText("تم ✓");
                 refreshStockCard(stockCard, warehouse.getId());
             } catch (NumberFormatException ex) { entryMsg.setText("ادخل أرقام صحيحة");
@@ -134,15 +150,31 @@ public class WarehouseDetailContent {
         TextField exitColoredField = new TextField(); exitColoredField.setPromptText("0");
         TextField exitWhiteField = new TextField(); exitWhiteField.setPromptText("0");
         TextField exitWasteField = new TextField(); exitWasteField.setPromptText("0");
-        TextField exitDestination = new TextField(); exitDestination.setPromptText("الوجهة");
+        TextField exitPriceField = new TextField(); exitPriceField.setPromptText("سعر الكيلو");
+
+        List<com.daoud.model.Factory> factories = com.daoud.dao.FactoryDAO.getAllFactories();
+        ComboBox<String> destinationCombo = new ComboBox<>();
+        destinationCombo.getItems().add("عم داود");
+        for (com.daoud.model.Factory f : factories) {
+            destinationCombo.getItems().add("مصنع: " + f.getName());
+        }
+        destinationCombo.setPromptText("اختار الوجهة");
+        destinationCombo.setMaxWidth(Double.MAX_VALUE);
+
         Label exitTotalLabel = new Label("الإجمالي: —");
+        Label exitValueLabel = new Label("القيمة: —");
         exitTotalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
+        exitValueLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
 
         Runnable calcExit = () -> {
             try {
                 double g = parse(exitGreenField), c = parse(exitColoredField);
                 double w = parse(exitWhiteField), ws = parse(exitWasteField);
-                exitTotalLabel.setText(String.format("الإجمالي: %.1f كيلو", g + c + w + ws));
+                double total = g + c + w + ws;
+                double price = parse(exitPriceField);
+                exitTotalLabel.setText(String.format("الإجمالي: %.1f كيلو", total));
+                exitValueLabel.setText(price > 0 ?
+                        String.format("القيمة: %.2f جنيه", total * price) : "القيمة: —");
             } catch (NumberFormatException ex) { exitTotalLabel.setText("الإجمالي: —"); }
         };
 
@@ -150,6 +182,7 @@ public class WarehouseDetailContent {
         exitColoredField.textProperty().addListener((o,old,n) -> calcExit.run());
         exitWhiteField.textProperty().addListener((o,old,n) -> calcExit.run());
         exitWasteField.textProperty().addListener((o,old,n) -> calcExit.run());
+        exitPriceField.textProperty().addListener((o,old,n) -> calcExit.run());
 
         Button saveExitBtn = new Button("تسجيل الخروج"); saveExitBtn.getStyleClass().add("btn-primary");
         Label exitMsg = new Label("");
@@ -158,31 +191,63 @@ public class WarehouseDetailContent {
             try {
                 double green = parse(exitGreenField), colored = parse(exitColoredField);
                 double white = parse(exitWhiteField), waste = parse(exitWasteField);
+                double exitPrice = parse(exitPriceField);
                 if (green + colored + white + waste == 0) { exitMsg.setText("ادخل كمية"); return; }
-//                String sql = "INSERT INTO warehouse_stock_exits (warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, recorded_by) VALUES (?, date('now'), ?, ?, ?, ?, ?, ?)";
+                if (destinationCombo.getValue() == null) { exitMsg.setText("اختار الوجهة"); return; }
+
+                String destination = destinationCombo.getValue();
                 String sql = "INSERT INTO warehouse_stock_exits " +
-                        "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, recorded_by) " +
-                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, warehouse.getId()); stmt.setDouble(2, green); stmt.setDouble(3, colored);
+                        "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
+                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
+                double totalKg = green + colored + white + waste;
+                try (Connection conn = DatabaseManager_online.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setInt(1, warehouse.getId());
+                    stmt.setDouble(2, green); stmt.setDouble(3, colored);
                     stmt.setDouble(4, white); stmt.setDouble(5, waste);
-                    stmt.setString(6, exitDestination.getText().trim()); stmt.setInt(7, userId);
+                    stmt.setString(6, destination);
+                    stmt.setDouble(7, exitPrice);
+                    stmt.setDouble(8, totalKg * exitPrice);
+                    stmt.setInt(9, userId);
                     stmt.executeUpdate();
                 }
-                exitGreenField.clear(); exitColoredField.clear(); exitWhiteField.clear();
-                exitWasteField.clear(); exitDestination.clear();
-                exitTotalLabel.setText("الإجمالي: —"); exitMsg.setText("تم ✓");
+
+                // لو مصنع — سجل شحنة تلقائي
+                if (destination.startsWith("مصنع: ")) {
+                    String factoryName = destination.replace("مصنع: ", "");
+                    for (com.daoud.model.Factory f : factories) {
+                        if (f.getName().equals(factoryName)) {
+                            String shipSql = "INSERT INTO factory_shipments " +
+                                    "(factory_id, shipment_date, gross_weight, deduction_pct, deduction_kg, net_weight, price_per_kg, total_amount, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, 0, 0, ?, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(shipSql)) {
+                                stmt.setInt(1, f.getId());
+                                stmt.setDouble(2, totalKg);
+                                stmt.setDouble(3, totalKg);
+                                stmt.setDouble(4, exitPrice);
+                                stmt.setDouble(5, totalKg * exitPrice);
+                                stmt.setInt(6, userId);
+                                stmt.executeUpdate();
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                exitGreenField.clear(); exitColoredField.clear();
+                exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
+                exitTotalLabel.setText("الإجمالي: —");
+                exitValueLabel.setText("القيمة: —");
+                exitMsg.setText("تم ✓");
                 refreshStockCard(stockCard, warehouse.getId());
-            }
-            catch (NumberFormatException ex) {
-                exitMsg.setText("تأكد من الأرقام");
-            } catch (SQLException ex) {
-                exitMsg.setText("خطأ: " + ex.getMessage());
-            }
+            } catch (NumberFormatException ex) { exitMsg.setText("تأكد من الأرقام");
+            } catch (SQLException ex) { exitMsg.setText("خطأ: " + ex.getMessage()); }
         });
 
         // ── موردي المخزن ──
-        Button openSupplierBtn = new Button("فتح حساب المورد"); openSupplierBtn.getStyleClass().add("btn-default");
+        Button openSupplierBtn = new Button("فتح حساب المورد");
+        openSupplierBtn.getStyleClass().add("btn-default");
         openSupplierBtn.setDisable(true);
         suppliersList.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) ->
                 openSupplierBtn.setDisable(selected == null));
@@ -194,18 +259,20 @@ public class WarehouseDetailContent {
             }
         });
 
-        Button addSupBtn = new Button("+ إضافة مورد للمخزن"); addSupBtn.getStyleClass().add("btn-default");
+        Button addSupBtn = new Button("+ إضافة مورد للمخزن");
+        addSupBtn.getStyleClass().add("btn-default");
         addSupBtn.setVisible(role.equals("admin"));
         addSupBtn.setManaged(role.equals("admin"));
         addSupBtn.setOnAction(e -> showAddSupplierDialog(userId, role, warehouse, supplierCombo, suppliersList));
 
-        Button backBtn = new Button("← رجوع للمخازن"); backBtn.getStyleClass().add("btn-default");
+        Button backBtn = new Button("← رجوع للمخازن");
+        backBtn.getStyleClass().add("btn-default");
         backBtn.setOnAction(e -> {
             MainLayout.loadContent(WarehousesContent.build(null, userId, username, role));
             MainLayout.setTitle("المخازن");
         });
 
-        // ── Layout ──
+        // ── Cards ──
         VBox entryCard = new VBox(10); entryCard.getStyleClass().add("card");
         Label entryTitle = new Label("تسجيل دخول بضاعة"); entryTitle.getStyleClass().add("card-title");
         entryCard.getChildren().addAll(
@@ -218,7 +285,6 @@ public class WarehouseDetailContent {
                 new HBox(16, pctLabel, netLabel, totalLabel),
                 saveEntryBtn, entryMsg);
 
-        // جعل الحقول تتمدد
         HBox.setHgrow(totalWeightField, Priority.ALWAYS);
         HBox.setHgrow(deductionField, Priority.ALWAYS);
         HBox.setHgrow(priceField, Priority.ALWAYS);
@@ -235,14 +301,16 @@ public class WarehouseDetailContent {
                         new VBox(4, new Label("ألوان (كيلو):"), exitColoredField),
                         new VBox(4, new Label("أبيض (كيلو):"), exitWhiteField),
                         new VBox(4, new Label("زبالة (كيلو):"), exitWasteField)),
-                new VBox(4, new Label("الوجهة:"), exitDestination),
-                exitTotalLabel, saveExitBtn, exitMsg);
+                new VBox(4, new Label("سعر الكيلو:"), exitPriceField),
+                new VBox(4, new Label("الوجهة:"), destinationCombo),
+                new HBox(16, exitTotalLabel, exitValueLabel),
+                saveExitBtn, exitMsg);
 
         exitGreenField.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(exitGreenField, Priority.ALWAYS);
         exitColoredField.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(exitColoredField, Priority.ALWAYS);
         exitWhiteField.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(exitWhiteField, Priority.ALWAYS);
         exitWasteField.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(exitWasteField, Priority.ALWAYS);
-        exitDestination.setMaxWidth(Double.MAX_VALUE);
+        exitPriceField.setMaxWidth(Double.MAX_VALUE);
 
         VBox suppliersCard = new VBox(10); suppliersCard.getStyleClass().add("card");
         Label supTitle = new Label("موردي المخزن"); supTitle.getStyleClass().add("card-title");
@@ -250,7 +318,6 @@ public class WarehouseDetailContent {
                 supTitle, suppliersList,
                 new HBox(8, openSupplierBtn, addSupBtn));
 
-        // two column layout
         HBox mainRow = new HBox(12, entryCard, exitCard);
         HBox.setHgrow(entryCard, Priority.ALWAYS);
         HBox.setHgrow(exitCard, Priority.ALWAYS);
@@ -270,7 +337,6 @@ public class WarehouseDetailContent {
         TextField phoneField = new TextField(); phoneField.setPromptText("رقم التليفون");
         TextField sectorField = new TextField(); sectorField.setPromptText("القطاع");
 
-        // الأرضية للأدمن بس
         TextField floorField = new TextField(); floorField.setPromptText("الأرضية");
         Label floorLabel = new Label("الأرضية:");
         floorField.setVisible(role.equals("admin")); floorField.setManaged(role.equals("admin"));
@@ -299,15 +365,6 @@ public class WarehouseDetailContent {
             SupplierDAO.addSupplier(nameField.getText().trim(), phoneField.getText().trim(),
                     sectorField.getText().trim(), floor, userId);
 
-            // ربط المورد بالمخزن
-//            List<Supplier> all = SupplierDAO.getAllSuppliers();
-//            for (Supplier s : all) {
-//                if (s.getName().equals(nameField.getText().trim())) {
-//                    WarehouseDAO.assignSupplierToWarehouse(warehouse.getId(), s.getId());
-//                    break;
-//                }
-//            }
-            // ربط المورد بالمخزن
             List<Supplier> all = SupplierDAO.getAllSuppliers();
             for (Supplier s : all) {
                 if (s.getName().equals(nameField.getText().trim())) {
@@ -315,34 +372,10 @@ public class WarehouseDetailContent {
                     break;
                 }
             }
-            // تحديث الـ combo والقائمة
-//            List<Supplier> updated = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
-//            combo.setItems(FXCollections.observableArrayList(updated));
-//            if (list != null) {
-//                list.getItems().clear();
-//                list.getItems().addAll(WarehouseDAO.getSuppliersByWarehouse(warehouse.getId()));
-//            }
-//            combo.getItems().clear();
-//            combo.getItems().addAll(WarehouseDAO.getSuppliersByWarehouse(warehouse.getId()));
-//            dialog.close();
-            final String supplierName = nameField.getText().trim();
 
-            // ربط المورد بالمخزن
-            List<Supplier> allSuppliers  = SupplierDAO.getAllSuppliers();
-            int newSupplierId = -1;
-            for (Supplier s : allSuppliers ) {
-                if (s.getName().equals(supplierName)) {
-                    newSupplierId = s.getId();
-                    WarehouseDAO.assignSupplierToWarehouse(warehouse.getId(), s.getId());
-                    break;
-                }
-            }
-            // تحديث الـ combo والقائمة فوراً
             List<Supplier> updated = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
             combo.getItems().setAll(updated);
-            if (list != null) {
-                list.getItems().setAll(updated);
-            }
+            if (list != null) list.getItems().setAll(updated);
             dialog.close();
         });
 
@@ -370,7 +403,6 @@ public class WarehouseDetailContent {
             double totalOut = green + colored + white + waste;
             double remaining = totalIn - totalOut;
 
-            // Stats row
             HBox statsRow = new HBox(12);
             statsRow.getChildren().addAll(
                     statBox("إجمالي الداخل", String.format("%.1f", totalIn / 1000), "طن"),
@@ -379,7 +411,6 @@ public class WarehouseDetailContent {
             );
             statsRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
 
-            // Types row
             HBox typesRow = new HBox(12);
             typesRow.getChildren().addAll(
                     typeBox("أخضر", green, "#2d7d2d"),
