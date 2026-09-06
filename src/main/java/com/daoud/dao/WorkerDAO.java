@@ -1,6 +1,7 @@
 package com.daoud.dao;
 
 import com.daoud.db.DatabaseManager_online;
+import com.daoud.model.Supplier;
 import com.daoud.model.Worker;
 
 import java.sql.*;
@@ -189,5 +190,38 @@ public class WorkerDAO {
         } catch (SQLException e) {
             System.err.println("Error: " + e.getMessage());
         }
+    }
+    public static List<Supplier> getSuppliersByWarehouse(int warehouseId) {
+        List<Supplier> list = new ArrayList<>();
+        System.out.println("DEBUG: getSuppliersByWarehouse called with warehouseId = " + warehouseId);
+        String sql = """
+        SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date
+        FROM suppliers s
+        JOIN warehouse_suppliers ws ON s.id = ws.supplier_id
+        WHERE ws.warehouse_id = ?
+        ORDER BY s.name
+    """;
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, warehouseId);
+            ResultSet rs = stmt.executeQuery();
+            int count = 0;
+            while (rs.next()) {
+                count++;
+                System.out.println("DEBUG: Found supplier: " + rs.getString("name"));
+                list.add(new Supplier(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("phone"),
+                        rs.getString("sector"),
+                        rs.getDouble("floor_amount"),
+                        rs.getString("floor_date")
+                ));
+            }
+            System.out.println("DEBUG: Total suppliers found = " + count);
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return list;
     }
 }

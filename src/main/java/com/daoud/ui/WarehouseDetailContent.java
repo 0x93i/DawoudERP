@@ -20,6 +20,7 @@ public class WarehouseDetailContent {
 
     public static Node build(int userId, String username, String role, Warehouse warehouse) {
 
+        System.out.println("DEBUG: Building warehouse detail for warehouse ID = " + warehouse.getId() + " name = " + warehouse.getName());
         // ── إجمالي البضاعة ──
         VBox stockCard = new VBox(10);
         stockCard.getStyleClass().add("card");
@@ -28,8 +29,20 @@ public class WarehouseDetailContent {
 
         // ── قائمة الموردين ──
         List<Supplier> suppliers = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
+        System.out.println("DEBUG: suppliers size = " + suppliers.size());
+        for (Supplier s : suppliers) {
+            System.out.println("DEBUG: supplier = " + s.getName());
+        }
         javafx.collections.ObservableList<Supplier> supplierObsList = FXCollections.observableArrayList(suppliers);
         ListView<Supplier> suppliersList = new ListView<>(supplierObsList);
+        suppliersList.setPrefHeight(180);
+        suppliersList.setCellFactory(lv -> new ListCell<Supplier>() {
+            @Override
+            protected void updateItem(Supplier item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
         suppliersList.setPrefHeight(180);
         ComboBox<Supplier> supplierCombo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
         supplierCombo.setPromptText("اختار المورد");
@@ -160,14 +173,15 @@ public class WarehouseDetailContent {
                 exitWasteField.clear(); exitDestination.clear();
                 exitTotalLabel.setText("الإجمالي: —"); exitMsg.setText("تم ✓");
                 refreshStockCard(stockCard, warehouse.getId());
-            } catch (NumberFormatException ex) { exitMsg.setText("تأكد من الأرقام");
-            } catch (SQLException ex) { exitMsg.setText("خطأ: " + ex.getMessage()); }
+            }
+            catch (NumberFormatException ex) {
+                exitMsg.setText("تأكد من الأرقام");
+            } catch (SQLException ex) {
+                exitMsg.setText("خطأ: " + ex.getMessage());
+            }
         });
 
         // ── موردي المخزن ──
-//        javafx.collections.ObservableList<Supplier> supplierObsList = FXCollections.observableArrayList(suppliers);
-//        ListView<Supplier> suppliersList = new ListView<>(supplierObsList);
-//        suppliersList.setPrefHeight(180);
         Button openSupplierBtn = new Button("فتح حساب المورد"); openSupplierBtn.getStyleClass().add("btn-default");
         openSupplierBtn.setDisable(true);
         suppliersList.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) ->
