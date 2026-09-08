@@ -4,6 +4,7 @@ import com.daoud.dao.WorkerDAO;
 import com.daoud.model.Worker;
 import com.daoud.db.DatabaseManager_online;
 import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -15,21 +16,21 @@ import java.util.List;
 
 public class WorkerDetailContent {
 
-    record HistoryRow(String type, String date, String amount, String method, String notes) {}
+    record HistoryRow(String type, int recordId, String date, String amount, String method, String notes) {}
 
     public static Node build(int userId, String username, String role, Worker worker) {
 
-        // ── جدول السجل ──
         List<HistoryRow> allRows = new ArrayList<>();
         VBox tableBody = new VBox(0);
-        HBox filtersBox = buildFilters(tableBody, allRows);
-        loadRows(allRows, worker.getId());
-        renderTable(tableBody, allRows, null);
 
         Label summaryLabel = new Label();
         refreshSummary(summaryLabel, worker.getId());
 
         Label phoneLbl = new Label("التليفون: " + (worker.getPhone() != null && !worker.getPhone().isEmpty() ? worker.getPhone() : "—"));
+
+        loadRows(allRows, worker.getId());
+        HBox filtersBox = buildFilters(tableBody, allRows, worker.getId(), summaryLabel);
+        renderTable(tableBody, allRows, null, worker.getId(), summaryLabel);
 
         // ── تسجيل يوم ──
         TextField wageTodayField = new TextField(String.valueOf(worker.getDailyWage()));
@@ -44,7 +45,8 @@ public class WorkerDetailContent {
                 WorkerDAO.recordAttendance(worker.getId(), wage, userId);
                 attendMsg.setText("تم ✓");
                 refreshSummary(summaryLabel, worker.getId());
-                allRows.clear(); loadRows(allRows, worker.getId()); renderTable(tableBody, allRows, null);
+                allRows.clear(); loadRows(allRows, worker.getId());
+                renderTable(tableBody, allRows, null, worker.getId(), summaryLabel);
             } catch (NumberFormatException ex) { attendMsg.setText("ادخل رقم"); }
         });
 
@@ -64,10 +66,16 @@ public class WorkerDetailContent {
                 double amount = Double.parseDouble(withdrawAmount.getText().trim());
                 WorkerDAO.addWithdrawal(worker.getId(), amount,
                         paymentMethodCombo.getValue(), userId, withdrawNotes.getText().trim());
+                int vaultId = com.daoud.db.VaultHelper.getWarehouseTreasuryId(worker.getWarehouseId());
+                com.daoud.db.VaultHelper.record(vaultId, "out",
+                        com.daoud.db.VaultHelper.toPaymentType(paymentMethodCombo.getValue()),
+                        amount, "سحب عامل: " + worker.getName(),
+                        withdrawNotes.getText().trim(), userId);
                 withdrawAmount.clear(); withdrawNotes.clear();
                 withdrawMsg.setText("تم ✓");
                 refreshSummary(summaryLabel, worker.getId());
-                allRows.clear(); loadRows(allRows, worker.getId()); renderTable(tableBody, allRows, null);
+                allRows.clear(); loadRows(allRows, worker.getId());
+                renderTable(tableBody, allRows, null, worker.getId(), summaryLabel);
             } catch (NumberFormatException ex) { withdrawMsg.setText("ادخل رقم"); }
         });
 
@@ -84,7 +92,8 @@ public class WorkerDetailContent {
                 if (r == ButtonType.OK) {
                     WorkerDAO.settleWorker(worker.getId());
                     refreshSummary(summaryLabel, worker.getId());
-                    allRows.clear(); loadRows(allRows, worker.getId()); renderTable(tableBody, allRows, null);
+                    allRows.clear(); loadRows(allRows, worker.getId());
+                    renderTable(tableBody, allRows, null, worker.getId(), summaryLabel);
                 }
             });
         });
@@ -95,29 +104,21 @@ public class WorkerDetailContent {
             MainLayout.setTitle("العمال");
         });
 
-        // ── Cards ──
         VBox infoCard = new VBox(6); infoCard.getStyleClass().add("card");
-        infoCard.getChildren().addAll(
-                new Label("العامل: " + worker.getName()),
-                phoneLbl, summaryLabel);
+        infoCard.getChildren().addAll(new Label("العامل: " + worker.getName()), phoneLbl, summaryLabel);
 
         VBox attendCard = new VBox(8); attendCard.getStyleClass().add("card");
-        Label attendTitle = new Label("تسجيل يوم عمل"); attendTitle.getStyleClass().add("card-title");
-        attendCard.getChildren().addAll(
-                attendTitle,
+        attendCard.getChildren().addAll(new Label("تسجيل يوم عمل:"),
                 new VBox(4, new Label("الأجر اليوم:"), wageTodayField),
                 attendBtn, attendMsg);
 
         VBox withdrawCard = new VBox(8); withdrawCard.getStyleClass().add("card");
-        Label withdrawTitle = new Label("سحب فلوس"); withdrawTitle.getStyleClass().add("card-title");
-        withdrawCard.getChildren().addAll(
-                withdrawTitle,
+        withdrawCard.getChildren().addAll(new Label("سحب فلوس:"),
                 new HBox(8,
                         new VBox(4, new Label("المبلغ:"), withdrawAmount),
                         new VBox(4, new Label("طريقة الدفع:"), paymentMethodCombo)),
                 new VBox(4, new Label("ملاحظة:"), withdrawNotes),
                 withdrawBtn, withdrawMsg);
-
         HBox.setHgrow(withdrawAmount, Priority.ALWAYS);
 
         VBox settleCard = new VBox(8); settleCard.getStyleClass().add("card");
@@ -135,17 +136,14 @@ public class WorkerDetailContent {
         return new VBox(12, backBtn, infoCard, topRow, settleCard, historyCard);
     }
 
-    private static HBox buildFilters(VBox tableBody, List<HistoryRow> allRows) {
+    private static HBox buildFilters(VBox tableBody, List<HistoryRow> allRows, int workerId, Label summaryLabel) {
         Button allBtn = filterBtn("الكل");
         Button attendBtn = filterBtn("حضور");
         Button withdrawBtn = filterBtn("سحب");
-
         setActive(allBtn, allBtn, attendBtn, withdrawBtn);
-
-        allBtn.setOnAction(e -> { setActive(allBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, null); });
-        attendBtn.setOnAction(e -> { setActive(attendBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, "حضور"); });
-        withdrawBtn.setOnAction(e -> { setActive(withdrawBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, "سحب"); });
-
+        allBtn.setOnAction(e -> { setActive(allBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, null, workerId, summaryLabel); });
+        attendBtn.setOnAction(e -> { setActive(attendBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, "حضور", workerId, summaryLabel); });
+        withdrawBtn.setOnAction(e -> { setActive(withdrawBtn, allBtn, attendBtn, withdrawBtn); renderTable(tableBody, allRows, "سحب", workerId, summaryLabel); });
         HBox box = new HBox(8, allBtn, attendBtn, withdrawBtn);
         box.setAlignment(Pos.CENTER_RIGHT);
         return box;
@@ -154,8 +152,8 @@ public class WorkerDetailContent {
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"التاريخ", "النوع", "المبلغ", "طريقة الدفع", "ملاحظة"};
-        double[] widths = {100, 80, 110, 120, 180};
+        String[] cols = {"التاريخ", "النوع", "المبلغ", "طريقة الدفع", "ملاحظة", ""};
+        double[] widths = {100, 75, 100, 110, 150, 110};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -166,45 +164,48 @@ public class WorkerDetailContent {
     }
 
     private static void loadRows(List<HistoryRow> rows, int workerId) {
-        String sql = """
-            SELECT 'حضور' as type, work_date as date, daily_wage as amount,
-                   '' as method, '' as notes
-            FROM worker_attendance WHERE worker_id = ?
-            UNION ALL
-            SELECT 'سحب' as type, withdrawal_date as date, amount,
-                   COALESCE(payment_method,'كاش') as method,
-                   COALESCE(notes,'') as notes
-            FROM worker_withdrawals WHERE worker_id = ?
-            ORDER BY date DESC LIMIT 50
-        """;
+        // حضور
+        String sql1 = "SELECT id, work_date, daily_wage FROM worker_attendance WHERE worker_id = ? ORDER BY work_date DESC LIMIT 30";
         try (Connection conn = DatabaseManager_online.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, workerId); stmt.setInt(2, workerId);
+             PreparedStatement stmt = conn.prepareStatement(sql1)) {
+            stmt.setInt(1, workerId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                rows.add(new HistoryRow(
-                        rs.getString("type"),
-                        rs.getString("date"),
-                        String.format("%.1f جنيه", rs.getDouble("amount")),
-                        rs.getString("method"),
-                        rs.getString("notes")
-                ));
+                rows.add(new HistoryRow("حضور", rs.getInt("id"), rs.getString("work_date"),
+                        String.format("%.1f جنيه", rs.getDouble("daily_wage")), "—", ""));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
+
+        // سحب
+        String sql2 = "SELECT id, withdrawal_date, amount, payment_method, notes FROM worker_withdrawals WHERE worker_id = ? ORDER BY withdrawal_date DESC LIMIT 30";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql2)) {
+            stmt.setInt(1, workerId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                rows.add(new HistoryRow("سحب", rs.getInt("id"), rs.getString("withdrawal_date"),
+                        String.format("%.1f جنيه", rs.getDouble("amount")),
+                        rs.getString("payment_method") != null ? rs.getString("payment_method") : "كاش",
+                        rs.getString("notes") != null ? rs.getString("notes") : ""));
+            }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
+
+        rows.sort((a, b) -> b.date().compareTo(a.date()));
     }
 
-    private static void renderTable(VBox table, List<HistoryRow> rows, String filterType) {
+    private static void renderTable(VBox table, List<HistoryRow> rows, String filterType,
+                                    int workerId, Label summaryLabel) {
         table.getChildren().clear();
-        double[] widths = {100, 80, 110, 120, 180};
-        boolean odd = true;
-        boolean hasRows = false;
+        double[] widths = {100, 75, 100, 110, 150, 55, 55};
+        boolean odd = true, hasRows = false;
 
         for (HistoryRow row : rows) {
             if (filterType != null && !row.type().equals(filterType)) continue;
             hasRows = true;
 
-            HBox r = new HBox();
-            r.setStyle("-fx-background-color: " + (odd ? "#ffffff" : "#fafaf8") + "; -fx-padding: 8 10; -fx-border-color: transparent transparent #f0f0f0 transparent;");
+            HBox r = new HBox(4);
+            r.setStyle("-fx-background-color: " + (odd ? "#ffffff" : "#fafaf8") +
+                    "; -fx-padding: 7 10; -fx-border-color: transparent transparent #f0f0f0 transparent;");
             odd = !odd;
 
             boolean isAttend = row.type().equals("حضور");
@@ -219,7 +220,8 @@ public class WorkerDetailContent {
             typeLbl.setMinWidth(widths[1]); typeLbl.setPrefWidth(widths[1]);
 
             Label amtLbl = new Label(row.amount());
-            amtLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + (isAttend ? "#3B6D11" : "#A32D2D") + ";");
+            amtLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " +
+                    (isAttend ? "#3B6D11" : "#A32D2D") + ";");
             amtLbl.setMinWidth(widths[2]); amtLbl.setPrefWidth(widths[2]);
 
             Label methodLbl = new Label(isAttend ? "—" : row.method());
@@ -230,7 +232,97 @@ public class WorkerDetailContent {
             notesLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
             notesLbl.setMinWidth(widths[4]); notesLbl.setPrefWidth(widths[4]);
 
-            r.getChildren().addAll(dateLbl, typeLbl, amtLbl, methodLbl, notesLbl);
+            Button editBtn = new Button("تعديل");
+            editBtn.setStyle("-fx-background-color: #EAF3DE; -fx-text-fill: #3B6D11; -fx-font-size: 11px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            editBtn.setMinWidth(widths[5]); editBtn.setPrefWidth(widths[5]);
+
+            Button deleteBtn = new Button("حذف");
+            deleteBtn.setStyle("-fx-background-color: #FCEBEB; -fx-text-fill: #A32D2D; -fx-font-size: 11px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            deleteBtn.setMinWidth(widths[6]); deleteBtn.setPrefWidth(widths[6]);
+
+            final HistoryRow finalRow = row;
+
+            // التعديل
+            editBtn.setOnAction(e -> {
+                TextField amtEdit = new TextField(row.amount().replace(" جنيه", "").trim());
+                amtEdit.setPromptText("المبلغ / الأجر");
+                Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
+                Label errLbl = new Label("");
+
+                if (!isAttend) {
+                    // تعديل سحب
+                    TextField notesEdit = new TextField(row.notes());
+                    ComboBox<String> methodEdit = new ComboBox<>(
+                            FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي"));
+                    methodEdit.setValue(row.method());
+
+                    saveEdit.setOnAction(ev -> {
+                        try {
+                            double amt = Double.parseDouble(amtEdit.getText().trim());
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(
+                                         "UPDATE worker_withdrawals SET amount=?, payment_method=?, notes=? WHERE id=?")) {
+                                stmt.setDouble(1, amt); stmt.setString(2, methodEdit.getValue());
+                                stmt.setString(3, notesEdit.getText().trim()); stmt.setInt(4, finalRow.recordId());
+                                stmt.executeUpdate();
+                            }
+                            rows.clear(); loadRows(rows, workerId);
+                            renderTable(table, rows, filterType, workerId, summaryLabel);
+                            refreshSummary(summaryLabel, workerId);
+                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                    });
+
+                    VBox dl = new VBox(10, new Label("المبلغ:"), amtEdit,
+                            new Label("طريقة الدفع:"), methodEdit,
+                            new Label("ملاحظة:"), notesEdit, saveEdit, errLbl);
+                    dl.setPadding(new Insets(20));
+                    DialogHelper.create("تعديل سحب", dl, 320, 260).show();
+                } else {
+                    // تعديل حضور
+                    saveEdit.setOnAction(ev -> {
+                        try {
+                            double amt = Double.parseDouble(amtEdit.getText().trim());
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(
+                                         "UPDATE worker_attendance SET daily_wage=? WHERE id=?")) {
+                                stmt.setDouble(1, amt); stmt.setInt(2, finalRow.recordId());
+                                stmt.executeUpdate();
+                            }
+                            rows.clear(); loadRows(rows, workerId);
+                            renderTable(table, rows, filterType, workerId, summaryLabel);
+                            refreshSummary(summaryLabel, workerId);
+                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                    });
+
+                    VBox dl = new VBox(10, new Label("الأجر:"), amtEdit, saveEdit, errLbl);
+                    dl.setPadding(new Insets(20));
+                    DialogHelper.create("تعديل حضور", dl, 280, 180).show();
+                }
+            });
+
+            // الحذف
+            deleteBtn.setOnAction(e -> {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "هتحذف السجل ده؟");
+                confirm.showAndWait().ifPresent(res -> {
+                    if (res == ButtonType.OK) {
+                        String delSql = finalRow.type().equals("حضور") ?
+                                "DELETE FROM worker_attendance WHERE id = ?" :
+                                "DELETE FROM worker_withdrawals WHERE id = ?";
+                        try (Connection conn = DatabaseManager_online.getConnection();
+                             PreparedStatement stmt = conn.prepareStatement(delSql)) {
+                            stmt.setInt(1, finalRow.recordId());
+                            stmt.executeUpdate();
+                            rows.remove(finalRow);
+                            renderTable(table, rows, filterType, workerId, summaryLabel);
+                            refreshSummary(summaryLabel, workerId);
+                        } catch (SQLException ex) { System.err.println(ex.getMessage()); }
+                    }
+                });
+            });
+
+            r.getChildren().addAll(dateLbl, typeLbl, amtLbl, methodLbl, notesLbl, editBtn, deleteBtn);
             table.getChildren().add(r);
         }
 
@@ -249,11 +341,10 @@ public class WorkerDetailContent {
 
     private static void setActive(Button active, Button... all) {
         for (Button b : all) {
-            if (b == active) {
+            if (b == active)
                 b.setStyle("-fx-font-size: 11px; -fx-padding: 4 12; -fx-border-radius: 4; -fx-background-radius: 4; -fx-background-color: #3B6D11; -fx-text-fill: white; -fx-cursor: hand;");
-            } else {
+            else
                 b.setStyle("-fx-font-size: 11px; -fx-padding: 4 12; -fx-border-radius: 4; -fx-background-radius: 4; -fx-background-color: white; -fx-border-color: #c0c0c0; -fx-text-fill: #1a1a18; -fx-cursor: hand;");
-            }
         }
     }
 

@@ -194,4 +194,17 @@ public class WarehouseDAO {
         }
         return list;
     }
+
+    public static int getWarehouseBySupplier(int supplierId) {
+        String sql = "SELECT warehouse_id FROM warehouse_suppliers WHERE supplier_id = ? LIMIT 1";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, supplierId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getInt("warehouse_id");
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return -1;
+    }
 }
