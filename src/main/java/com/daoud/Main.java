@@ -1,49 +1,3 @@
-//package com.daoud;
-//
-//import com.daoud.db.DatabaseManager_online;
-//import com.daoud.ui.LoginScreen;
-//import javafx.application.Application;
-//import javafx.collections.ListChangeListener;
-//import javafx.geometry.NodeOrientation;
-//import javafx.stage.Stage;
-//import javafx.stage.Window;
-//
-//public class Main extends Application {
-//
-//    @Override
-//    public void start(Stage stage) {
-//        Window.getWindows().addListener((ListChangeListener<Window>) change -> {
-//            while (change.next()) {
-//                if (change.wasAdded()) {
-//                    for (Window window : change.getAddedSubList()) {
-//                        // لو عنده scene دلوقتي
-//                        if (window.getScene() != null) {
-//                            window.getScene().getRoot()
-//                                    .setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
-//                        }
-//                        // لو الـ scene هتتغير بعدين
-//                        window.sceneProperty().addListener((obs, oldScene, newScene) -> {
-//                            if (newScene != null) {
-//                                newScene.getRoot()
-//                                        .setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
-//                            }
-//                        });
-//                    }
-//                }
-//            }
-//        });
-//
-//        DatabaseManager_online.initializeDatabase();
-//        DatabaseManager_online.createDefaultAdmin();
-//        LoginScreen.show(stage);
-//        // الـ main stage نفسه
-//        stage.getScene().getRoot().setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
-//    }
-//
-//    public static void main(String[] args) {
-//        launch(args);
-//    }
-//}
 package com.daoud;
 
 import com.daoud.db.DatabaseManager_online;
@@ -99,9 +53,12 @@ public class Main extends Application {
                     "خطأ في التشغيل",
                     JOptionPane.ERROR_MESSAGE);
         }
+        // Check for updates in background
+        UpdateChecker.check();
     }
 
     public static void main(String[] args) {
         launch(args);
+        // بعد ما البرنامج يفتح
     }
 }
