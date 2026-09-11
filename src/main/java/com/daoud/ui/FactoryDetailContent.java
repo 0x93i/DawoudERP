@@ -33,7 +33,7 @@ public class FactoryDetailContent {
         // ── شحنة ──
         TextField supplierNameField = new TextField(); supplierNameField.setPromptText("اسم المورد (اختياري)");
         TextField grossWeightField = new TextField(); grossWeightField.setPromptText("الوزن الإجمالي (كيلو)");
-        TextField deductionKgField = new TextField(); deductionKgField.setPromptText("كمية الخصم (كيلو)");
+        TextField deductionKgField = new TextField(); deductionKgField.setPromptText("نسبة الخصم %");
         TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
 
         Label deductionPctLabel = new Label("نسبة الخصم: —");
@@ -43,15 +43,15 @@ public class FactoryDetailContent {
         Runnable calc = () -> {
             try {
                 double gross = Double.parseDouble(grossWeightField.getText().trim());
-                double dk = deductionKgField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionKgField.getText().trim());
+                double pct = deductionKgField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionKgField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
+                double dk = gross * (pct / 100.0);
                 double net = gross - dk;
-                double pct = gross > 0 ? (dk / gross) * 100.0 : 0;
-                deductionPctLabel.setText(String.format("نسبة الخصم: %.2f%%", pct));
+                deductionPctLabel.setText(String.format("كمية الخصم: %.2f كيلو", dk));
                 netWeightLabel.setText(String.format("الوزن الصافي: %.2f كيلو", net));
                 totalLabel.setText(String.format("الإجمالي: %.2f جنيه", net * price));
             } catch (NumberFormatException ex) {
-                deductionPctLabel.setText("نسبة الخصم: —");
+                deductionPctLabel.setText("كمية الخصم: —");
                 netWeightLabel.setText("الوزن الصافي: —");
                 totalLabel.setText("الإجمالي: —");
             }
@@ -67,9 +67,10 @@ public class FactoryDetailContent {
         saveShipBtn.setOnAction(e -> {
             try {
                 double gross = Double.parseDouble(grossWeightField.getText().trim());
-                double dk = deductionKgField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionKgField.getText().trim());
+                double pct = deductionKgField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionKgField.getText().trim());
                 double price = Double.parseDouble(priceField.getText().trim());
-                double pct = gross > 0 ? (dk / gross) * 100.0 : 0;
+                double dk = gross * (pct / 100.0);
+
                 FactoryDAO.addShipment(factory.getId(), supplierNameField.getText().trim(), gross, pct, price, userId);
                 grossWeightField.clear(); deductionKgField.clear(); priceField.clear(); supplierNameField.clear();
                 deductionPctLabel.setText("نسبة الخصم: —");
