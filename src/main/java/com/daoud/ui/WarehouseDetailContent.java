@@ -68,7 +68,7 @@ public class WarehouseDetailContent {
 
         // ── حقول دخول البضاعة ──
         TextField totalWeightField = new TextField(); totalWeightField.setPromptText("الوزن الإجمالي (كيلو)");
-        TextField deductionField = new TextField(); deductionField.setPromptText("كمية الخصم (كيلو)");
+        TextField deductionField = new TextField(); deductionField.setPromptText("نسبة الخصم %");
         TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
 
         Label pctLabel = new Label("نسبة الخصم: —");
@@ -82,15 +82,15 @@ public class WarehouseDetailContent {
         Runnable calcEntry = () -> {
             try {
                 double gross = Double.parseDouble(totalWeightField.getText().trim());
-                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+                double pct = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
-                double net = gross - ded;
-                double pct = gross > 0 ? (ded / gross) * 100.0 : 0;
-                pctLabel.setText(String.format("نسبة الخصم: %.2f%%", pct));
+                double dedKg = gross * (pct / 100.0);
+                double net = gross - dedKg;
+                pctLabel.setText(String.format("كمية الخصم: %.2f كيلو", dedKg));
                 netLabel.setText(String.format("الوزن الصافي: %.1f كيلو", net));
                 totalLabel.setText(String.format("الإجمالي: %.2f جنيه", net * price));
             } catch (NumberFormatException ex) {
-                pctLabel.setText("نسبة الخصم: —");
+                pctLabel.setText("كمية الخصم: —");
                 netLabel.setText("الوزن الصافي: —");
                 totalLabel.setText("الإجمالي: —");
             }
@@ -107,8 +107,9 @@ public class WarehouseDetailContent {
             if (supplierCombo.getValue() == null) { entryMsg.setText("اختار المورد"); return; }
             try {
                 double gross = Double.parseDouble(totalWeightField.getText().trim());
-                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+                double pct = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
+                double ded = gross * (pct / 100.0);
 
                 String sql = "INSERT INTO warehouse_stock_entries " +
                         "(warehouse_id, supplier_id, entry_date, total_weight, recorded_by) " +

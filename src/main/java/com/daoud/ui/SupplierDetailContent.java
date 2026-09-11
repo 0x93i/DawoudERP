@@ -37,7 +37,7 @@ public class SupplierDetailContent {
 
         // ── تسجيل بضاعة ──
         TextField grossWeightField = new TextField(); grossWeightField.setPromptText("الوزن الإجمالي (كيلو)");
-        TextField deductionField = new TextField(); deductionField.setPromptText("خصم الوزن (كيلو)");
+        TextField deductionField = new TextField(); deductionField.setPromptText("نسبة الخصم %");
         TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
 
         Label pctLabel = new Label("نسبة الخصم: —");
@@ -51,15 +51,15 @@ public class SupplierDetailContent {
         Runnable calc = () -> {
             try {
                 double gross = Double.parseDouble(grossWeightField.getText().trim());
-                double ded = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+                double pct = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
-                double net = gross - ded;
-                double pct = gross > 0 ? (ded / gross) * 100.0 : 0;
-                pctLabel.setText(String.format("نسبة الخصم: %.2f%%", pct));
+                double dedKg = gross * (pct / 100.0);
+                double net = gross - dedKg;
+                pctLabel.setText(String.format("كمية الخصم: %.2f كيلو", dedKg));
                 netWeightLabel.setText(String.format("الوزن الصافي: %.2f كيلو", net));
                 totalLabel.setText(String.format("الإجمالي: %.2f جنيه", net * price));
             } catch (NumberFormatException ex) {
-                pctLabel.setText("نسبة الخصم: —");
+                pctLabel.setText("كمية الخصم: —");
                 netWeightLabel.setText("الوزن الصافي: —");
                 totalLabel.setText("الإجمالي: —");
             }
@@ -75,8 +75,10 @@ public class SupplierDetailContent {
         saveDailyBtn.setOnAction(e -> {
             try {
                 double gross = Double.parseDouble(grossWeightField.getText().trim());
-                double deduction = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
+                double pct = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = Double.parseDouble(priceField.getText().trim());
+                double deduction = gross * (pct / 100.0);
+
                 String sql = "INSERT INTO supplier_transactions (supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
                 try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, supplier.getId()); stmt.setDouble(2, gross);
