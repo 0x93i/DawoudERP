@@ -212,7 +212,7 @@ public class WarehouseDetailContent {
                     TextField factoryGrossField = new TextField(String.valueOf(totalKg));
                     factoryGrossField.setPromptText("الوزن الإجمالي عند المصنع");
                     TextField factoryDeductionField = new TextField("0");
-                    factoryDeductionField.setPromptText("خصم المصنع (كيلو)");
+                    factoryDeductionField.setPromptText("نسبة الخصم %");
                     TextField sellPriceField = new TextField();
                     sellPriceField.setPromptText("سعر البيع / كيلو");
 
@@ -233,21 +233,17 @@ public class WarehouseDetailContent {
                     Runnable calcShipment = () -> {
                         try {
                             double fGross = Double.parseDouble(factoryGrossField.getText().trim());
-                            double fDed = parseField(factoryDeductionField);
+                            double fPct = parseField(factoryDeductionField);
                             double sellPrice = sellPriceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(sellPriceField.getText().trim());
-                            double fNet = fGross - fDed;
+                            double fDedKg = fGross * (fPct / 100.0);
+                            double fNet = fGross - fDedKg;
                             double sellTotal = fNet * sellPrice;
-                            double costs = parseField(costLoading) + parseField(costWorkers) +
-                                    parseField(costFuel) + parseField(costTransport) + parseField(costOther);
                             double grossProfit = sellTotal - purchaseTotal;
-                            double netProfit = grossProfit - costs;
 
-                            factoryNetLabel.setText(String.format("صافي وزن المصنع: %.2f كيلو", fNet));
+                            factoryNetLabel.setText(String.format("صافي وزن المصنع: %.2f كيلو (خصم: %.2f كيلو)", fNet, fDedKg));
                             sellTotalLabel.setText(String.format("إجمالي البيع: %.2f جنيه", sellTotal));
                             grossProfitLabel.setText(String.format("مجمل الربح: %.2f جنيه", grossProfit));
                             grossProfitLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (grossProfit >= 0 ? "#3B6D11" : "#A32D2D") + ";");
-                            netProfitLabel.setText(String.format("صافي الربح: %.2f جنيه", netProfit));
-                            netProfitLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (netProfit >= 0 ? "#3B6D11" : "#A32D2D") + ";");
                         } catch (NumberFormatException ex) {
                             factoryNetLabel.setText("صافي وزن المصنع: —");
                         }
@@ -268,13 +264,12 @@ public class WarehouseDetailContent {
                     saveShipBtn.setOnAction(ev -> {
                         try {
                             double fGross = Double.parseDouble(factoryGrossField.getText().trim());
-                            double fDed = parseField(factoryDeductionField);
+                            double fPct = parseField(factoryDeductionField);
+                            double fDed = fGross * (fPct / 100.0);
                             double sellPrice = Double.parseDouble(sellPriceField.getText().trim());
                             double fNet = fGross - fDed;
                             double sellTotal = fNet * sellPrice;
-                            double costs = parseField(costLoading) + parseField(costWorkers) +
-                                    parseField(costFuel) + parseField(costTransport) + parseField(costOther);
-                            double netProfit = (sellTotal - purchaseTotal) - costs;
+                            double grossProfit = sellTotal - purchaseTotal;
 
                             // تسجيل في warehouse_stock_exits
                             String exitSql = "INSERT INTO warehouse_stock_exits " +
@@ -294,19 +289,15 @@ public class WarehouseDetailContent {
 
                             // تسجيل في factory_shipments
                             String shipSql = "INSERT INTO factory_shipments " +
-                                    "(factory_id, shipment_date, gross_weight, deduction_kg, net_weight, price_per_kg, total_amount, " +
-                                    "purchase_total, cost_loading, cost_workers, cost_fuel, cost_transport, cost_other, net_profit, source, recorded_by) " +
-                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'warehouse', ?)";
+                                    "(factory_id, shipment_date, gross_weight, deduction_kg, net_weight, price_per_kg, total_amount, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
                             try (Connection conn = DatabaseManager_online.getConnection();
                                  PreparedStatement stmt = conn.prepareStatement(shipSql)) {
                                 stmt.setInt(1, finalFactory.getId());
                                 stmt.setDouble(2, fGross); stmt.setDouble(3, fDed);
                                 stmt.setDouble(4, fNet); stmt.setDouble(5, sellPrice);
-                                stmt.setDouble(6, sellTotal); stmt.setDouble(7, purchaseTotal);
-                                stmt.setDouble(8, parseField(costLoading)); stmt.setDouble(9, parseField(costWorkers));
-                                stmt.setDouble(10, parseField(costFuel)); stmt.setDouble(11, parseField(costTransport));
-                                stmt.setDouble(12, parseField(costOther)); stmt.setDouble(13, netProfit);
-                                stmt.setInt(14, userId);
+                                stmt.setDouble(6, sellTotal);
+                                stmt.setInt(7, userId);
                                 stmt.executeUpdate();
                             }
 
@@ -331,23 +322,13 @@ public class WarehouseDetailContent {
                             new Label("سعر البيع / كيلو:"), sellPriceField,
                             factoryNetLabel, sellTotalLabel,
                             new Separator(),
-                            new Label("--- مصاريف التشغيل ---"),
-                            new HBox(8,
-                                    new VBox(4, new Label("تحميل:"), costLoading),
-                                    new VBox(4, new Label("عمال:"), costWorkers),
-                                    new VBox(4, new Label("بنزين:"), costFuel)),
-                            new HBox(8,
-                                    new VBox(4, new Label("نقل:"), costTransport),
-                                    new VBox(4, new Label("أخرى:"), costOther)),
-                            new Separator(),
-                            grossProfitLabel, netProfitLabel,
+                            grossProfitLabel,
                             saveShipBtn, shipErr);
                     shipLayout.setPadding(new Insets(20));
-
                     ScrollPane scroll = new ScrollPane(shipLayout);
                     scroll.setFitToWidth(true);
                     VBox dialogBox = new VBox(scroll);
-                    DialogHelper.create("بيانات الشحنة: " + finalFactory.getName(), dialogBox, 420, 580).show();
+                    DialogHelper.create("بيانات الشحنة: " + finalFactory.getName(), dialogBox, 420, 380).show();
                     return;
                 }
 

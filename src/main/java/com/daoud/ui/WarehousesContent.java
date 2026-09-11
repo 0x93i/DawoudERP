@@ -118,6 +118,19 @@ public class WarehousesContent {
             if (managerCombo.getValue() == null) { errorLbl.setText("اختار مسؤول"); return; }
             int managerId = Integer.parseInt(managerCombo.getValue().split("\\|")[0]);
             WarehouseDAO.addWarehouse(nameField.getText().trim(), managerId);
+
+// عمل خزنة للمخزن الجديد تلقائي
+            String warehouseName = nameField.getText().trim();
+            String vaultSql = "INSERT INTO vaults (name, owner_type, owner_id) " +
+                    "SELECT 'خزنة ' || name, 'warehouse', id FROM warehouses WHERE name = ? ORDER BY id DESC LIMIT 1";
+            try (java.sql.Connection conn = com.daoud.db.DatabaseManager_online.getConnection();
+                 java.sql.PreparedStatement vstmt = conn.prepareStatement(vaultSql)) {
+                vstmt.setString(1, warehouseName);
+                vstmt.executeUpdate();
+            } catch (java.sql.SQLException ex) {
+                System.err.println("Vault creation error: " + ex.getMessage());
+            }
+
             refreshList(listView, userId, role);
             dialog.close();
         });

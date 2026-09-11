@@ -48,6 +48,17 @@ public class WarehouseDAO {
     }
 
     public static void deleteWarehouse(int id) {
+        // حذف الخزنة المرتبطة
+        String deleteVault = "DELETE FROM vaults WHERE owner_type = 'warehouse' AND owner_id = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement vStmt = conn.prepareStatement(deleteVault)) {
+            vStmt.setInt(1, id);
+            vStmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error deleting vault: " + e.getMessage());
+        }
+
+        // حذف المخزن
         String sql = "DELETE FROM warehouses WHERE id = ?";
         try (Connection conn = DatabaseManager_online.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
