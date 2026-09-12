@@ -195,7 +195,7 @@ public class ShipmentsContent {
         supplierGrossField.setPromptText("الوزن الإجمالي عند المورد (كيلو)");
 
         TextField supplierDeductionField = new TextField();
-        supplierDeductionField.setPromptText("خصم المورد (كيلو)");
+        supplierDeductionField.setPromptText("نسبة خصم المورد %");
 
         TextField purchasePriceField = new TextField();
         purchasePriceField.setPromptText("سعر الشراء / كيلو");
@@ -216,7 +216,7 @@ public class ShipmentsContent {
         factoryGrossField.setPromptText("الوزن الإجمالي عند المصنع (كيلو)");
 
         TextField factoryDeductionField = new TextField();
-        factoryDeductionField.setPromptText("خصم المصنع (كيلو)");
+        factoryDeductionField.setPromptText("نسبة خصم المصنع %");
 
         TextField salePriceField = new TextField();
         salePriceField.setPromptText("سعر البيع / كيلو");
@@ -270,17 +270,11 @@ public class ShipmentsContent {
 
                 // -------- المورد --------
 
-                double supplierGross =
-                        parseD(supplierGrossField);
-
-                double supplierDeduction =
-                        parseD(supplierDeductionField);
-
-                double purchasePrice =
-                        parseD(purchasePriceField);
-
-                double supplierNet =
-                        supplierGross - supplierDeduction;
+                double supplierGross = parseD(supplierGrossField);
+                double supplierPct = parseD(supplierDeductionField);
+                double supplierDeduction = supplierGross * (supplierPct / 100.0);
+                double purchasePrice = parseD(purchasePriceField);
+                double supplierNet = supplierGross - supplierDeduction;
 
                 if (supplierNet < 0) {
                     supplierNet = 0;
@@ -292,17 +286,11 @@ public class ShipmentsContent {
 
                 // -------- المصنع --------
 
-                double factoryGross =
-                        parseD(factoryGrossField);
-
-                double factoryDeduction =
-                        parseD(factoryDeductionField);
-
-                double salePrice =
-                        parseD(salePriceField);
-
-                double factoryNet =
-                        factoryGross - factoryDeduction;
+                double factoryGross = parseD(factoryGrossField);
+                double factoryPct = parseD(factoryDeductionField);
+                double factoryDeduction = factoryGross * (factoryPct / 100.0);
+                double salePrice = parseD(salePriceField);
+                double factoryNet = factoryGross - factoryDeduction;
 
                 if (factoryNet < 0) {
                     factoryNet = 0;
@@ -601,20 +589,11 @@ public class ShipmentsContent {
                                 supplierGrossField.getText().trim()
                         );
 
-                double supplierDeduction =
-                        supplierDeductionField.getText().trim().isEmpty()
-                                ? 0
-                                : Double.parseDouble(
-                                supplierDeductionField.getText().trim()
-                        );
-
-                double purchasePrice =
-                        Double.parseDouble(
-                                purchasePriceField.getText().trim()
-                        );
-
-                double supplierNet =
-                        supplierGross - supplierDeduction;
+                double supplierPct = supplierDeductionField.getText().trim().isEmpty()
+                        ? 0 : Double.parseDouble(supplierDeductionField.getText().trim());
+                double supplierDeduction = supplierGross * (supplierPct / 100.0);
+                double purchasePrice = Double.parseDouble(purchasePriceField.getText().trim());
+                double supplierNet = supplierGross - supplierDeduction;
 
 
                 if (supplierNet < 0) {
@@ -630,26 +609,13 @@ public class ShipmentsContent {
 
 
                 // -------- بيانات المصنع --------
+                double factoryGross = Double.parseDouble(factoryGrossField.getText().trim());
+                double factoryPct = factoryDeductionField.getText().trim().isEmpty()
+                        ? 0 : Double.parseDouble(factoryDeductionField.getText().trim());
 
-                double factoryGross =
-                        Double.parseDouble(
-                                factoryGrossField.getText().trim()
-                        );
-
-                double factoryDeduction =
-                        factoryDeductionField.getText().trim().isEmpty()
-                                ? 0
-                                : Double.parseDouble(
-                                factoryDeductionField.getText().trim()
-                        );
-
-                double salePrice =
-                        Double.parseDouble(
-                                salePriceField.getText().trim()
-                        );
-
-                double factoryNet =
-                        factoryGross - factoryDeduction;
+                double factoryDeduction = factoryGross * (factoryPct / 100.0);
+                double factoryNet = factoryGross - factoryDeduction;
+                double salePrice = Double.parseDouble(salePriceField.getText().trim());
 
 
                 if (factoryNet < 0) {
