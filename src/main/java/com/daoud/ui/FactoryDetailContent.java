@@ -17,7 +17,7 @@ import java.util.List;
 
 public class FactoryDetailContent {
 
-    record HistoryRow(String type, int recordId, String date, String netWeight, String pct, String amount, String notes) {}
+    record HistoryRow(String type, int recordId, String date, String netWeight, String pct, String dedKg, String price, String amount, String supplierName) {}
 
     public static Node build(int userId, String username, String role, Factory factory) {
 
@@ -167,8 +167,8 @@ public class FactoryDetailContent {
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"التاريخ", "النوع", "الوزن الصافي", "نسبة الخصم", "المبلغ", "ملاحظة", ""};
-        double[] widths = {95, 75, 105, 95, 100, 130, 110};
+        String[] cols = {"التاريخ", "النوع", "اسم المورد", "الوزن الصافي", "نسبة الخصم", "كمية الخصم", "سعر الكيلو", "المبلغ", ""};
+        double[] widths = {90, 70, 110, 95, 85, 90, 90, 90, 110};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -190,8 +190,10 @@ public class FactoryDetailContent {
                 rows.add(new HistoryRow("شحنة", rs.getInt("id"), rs.getString("shipment_date"),
                         String.format("%.1f كيلو", rs.getDouble("net_weight")),
                         String.format("%.1f%%", rs.getDouble("deduction_pct")),
+                        String.format("%.1f كيلو", rs.getDouble("deduction_kg")),
+                        String.format("%.2f جنيه", rs.getDouble("price_per_kg")),
                         String.format("%.0f جنيه", rs.getDouble("total_amount")),
-                        rs.getString("notes")));
+                        rs.getString("supplier_name") != null ? rs.getString("supplier_name") : "—"));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
@@ -204,9 +206,9 @@ public class FactoryDetailContent {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 rows.add(new HistoryRow("دفعة", rs.getInt("id"), rs.getString("payment_date"),
-                        "—", "—",
+                        "—", "—", "—", "—",
                         String.format("%.0f جنيه", rs.getDouble("amount")),
-                        rs.getString("notes")));
+                        rs.getString("notes") != null ? rs.getString("notes") : ""));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
@@ -216,8 +218,7 @@ public class FactoryDetailContent {
     private static void renderTable(VBox table, List<HistoryRow> rows, String filterType,
                                     int factoryId, Label balanceLabel) {
         table.getChildren().clear();
-        double[] widths = {95, 75, 105, 95, 100, 130, 55, 55};
-        boolean odd = true, hasRows = false;
+        double[] widths = {90, 70, 110, 95, 85, 90, 90, 90, 55, 55};        boolean odd = true, hasRows = false;
 
         for (HistoryRow row : rows) {
             if (filterType != null && !row.type().equals(filterType)) continue;
@@ -252,7 +253,7 @@ public class FactoryDetailContent {
                     (isShip ? "#1a1a18" : "#3B6D11") + ";");
             amtLbl.setMinWidth(widths[4]); amtLbl.setPrefWidth(widths[4]);
 
-            Label notesLbl = new Label(row.notes());
+            Label notesLbl = new Label(row.supplierName());
             notesLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
             notesLbl.setMinWidth(widths[5]); notesLbl.setPrefWidth(widths[5]);
 

@@ -841,6 +841,20 @@ public class ShipmentsContent {
 
 
                     stmt.executeUpdate();
+
+                }
+                // تسجيل في حساب المورد
+                String supplierTransSql = "INSERT INTO supplier_transactions " +
+                        "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) " +
+                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
+                try (Connection connS = DatabaseManager_online.getConnection();
+                     PreparedStatement stmtS = connS.prepareStatement(supplierTransSql)) {
+                    stmtS.setInt(1, supplierCombo.getValue().getId());
+                    stmtS.setDouble(2, supplierGross);
+                    stmtS.setDouble(3, supplierDeduction);
+                    stmtS.setDouble(4, purchasePrice);
+                    stmtS.setInt(5, userId);
+                    stmtS.executeUpdate();
                 }
 
                 // تسجيل في factory_shipments

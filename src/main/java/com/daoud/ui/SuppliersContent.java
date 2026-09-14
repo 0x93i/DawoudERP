@@ -23,40 +23,62 @@ public class SuppliersContent {
 
     public static Node build(int userId, String username, String role) {
 
-        // ── جدول الموردين ──
         VBox tableBody = new VBox(0);
         List<SupplierRow> allRows = new ArrayList<>();
         loadSupplierRows(allRows, userId, role);
 
         // ── فلاتر ──
+        List<Button> allFilterBtns = new ArrayList<>();
+
         Button allBtn = filterBtn("الكل");
         Button warehouseBtn = filterBtn("مخازن");
         Button generalBtn = filterBtn("عام");
-        setActive(allBtn, allBtn, warehouseBtn, generalBtn);
+        allFilterBtns.add(allBtn);
+        allFilterBtns.add(warehouseBtn);
+        allFilterBtns.add(generalBtn);
+
+        // فلتر لكل مخزن
+        List<Warehouse> warehouses = WarehouseDAO.getAllWarehouses();
+        List<Button> warehouseBtns = new ArrayList<>();
+        for (Warehouse w : warehouses) {
+            Button wBtn = filterBtn("🏭 " + w.getName());
+            allFilterBtns.add(wBtn);
+            warehouseBtns.add(wBtn);
+            final String wName = w.getName();
+            wBtn.setOnAction(e -> {
+                setActiveFromList(wBtn, allFilterBtns);
+                renderTable(tableBody, allRows, "wh:" + wName, userId, username, role);
+            });
+        }
+
+        Button[] allBtnsArr = allFilterBtns.toArray(new Button[0]);
+        setActiveFromList(allBtn, allFilterBtns);
 
         allBtn.setOnAction(e -> {
-            setActive(allBtn, allBtn, warehouseBtn, generalBtn);
+            setActiveFromList(allBtn, allFilterBtns);
             renderTable(tableBody, allRows, null, userId, username, role);
         });
         warehouseBtn.setOnAction(e -> {
-            setActive(warehouseBtn, allBtn, warehouseBtn, generalBtn);
+            setActiveFromList(warehouseBtn, allFilterBtns);
             renderTable(tableBody, allRows, "warehouse", userId, username, role);
         });
         generalBtn.setOnAction(e -> {
-            setActive(generalBtn, allBtn, warehouseBtn, generalBtn);
+            setActiveFromList(generalBtn, allFilterBtns);
             renderTable(tableBody, allRows, "general", userId, username, role);
         });
 
         renderTable(tableBody, allRows, null, userId, username, role);
 
-        HBox filtersBox = new HBox(8, allBtn, warehouseBtn, generalBtn);
+        HBox filtersBox = new HBox(6);
         filtersBox.setAlignment(Pos.CENTER_RIGHT);
+        filtersBox.getChildren().addAll(allBtn, warehouseBtn, generalBtn);
+        filtersBox.getChildren().addAll(warehouseBtns);
 
-        // ── زر إضافة ──
         Button addBtn = new Button("إضافة مورد");
         addBtn.getStyleClass().add("btn-primary");
         addBtn.setDisable(!role.equals("admin"));
-        addBtn.setOnAction(e -> showAddDialog(userId, username, role, allRows, tableBody));
+        addBtn.setOnAction(e -> showAddDialog(userId, username, role, allRows, tableBody, allFilterBtns));
+
         HBox topBar = new HBox(10, filtersBox,
                 new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }},
                 addBtn);
@@ -80,9 +102,7 @@ public class SuppliersContent {
             Warehouse w = WarehouseDAO.getWarehouseByManager(userId);
             suppliers = w != null ? WarehouseDAO.getSuppliersByWarehouse(w.getId()) : new ArrayList<>();
         }
-
         for (Supplier s : suppliers) {
-            // جيب اسم المخزن المرتبط
             String warehouseName = getSupplierWarehouseName(s.getId());
             rows.add(new SupplierRow(s, warehouseName));
         }
@@ -98,14 +118,14 @@ public class SuppliersContent {
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) return rs.getString("name");
         } catch (SQLException e) { System.err.println(e.getMessage()); }
-        return null; // مورد عام
+        return null;
     }
 
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
         String[] cols = {"اسم المورد", "التليفون", "القطاع", "الأرضية", "النوع", ""};
-        double[] widths = {160, 120, 120, 100, 120, 120};
+        double[] widths = {160, 120, 120, 100, 140, 120};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -118,14 +138,16 @@ public class SuppliersContent {
     private static void renderTable(VBox table, List<SupplierRow> rows, String filter,
                                     int userId, String username, String role) {
         table.getChildren().clear();
-        double[] widths = {160, 120, 120, 100, 120, 120};
+        double[] widths = {160, 120, 120, 100, 140, 120};
         boolean odd = true, hasRows = false;
 
         for (SupplierRow row : rows) {
             boolean isWarehouse = row.warehouseName() != null;
+
             if (filter != null) {
                 if (filter.equals("warehouse") && !isWarehouse) continue;
                 if (filter.equals("general") && isWarehouse) continue;
+                if (filter.startsWith("wh:") && !filter.equals("wh:" + row.warehouseName())) continue;
             }
             hasRows = true;
 
@@ -152,7 +174,6 @@ public class SuppliersContent {
             floorLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
             floorLbl.setMinWidth(widths[3]); floorLbl.setPrefWidth(widths[3]);
 
-            // Tag المخزن أو عام
             Label typeLbl;
             if (isWarehouse) {
                 typeLbl = new Label("🏭 " + row.warehouseName());
@@ -165,7 +186,6 @@ public class SuppliersContent {
             }
             typeLbl.setMinWidth(widths[4]); typeLbl.setPrefWidth(widths[4]);
 
-            // زر فتح الحساب
             Button openBtn = new Button("فتح الحساب");
             openBtn.setStyle("-fx-background-color: #3B6D11; -fx-text-fill: white; -fx-font-size: 11px; " +
                     "-fx-padding: 4 10; -fx-background-radius: 4; -fx-cursor: hand;");
@@ -187,13 +207,14 @@ public class SuppliersContent {
         }
     }
 
-    private static void showAddDialog(int userId, String username, String role, List<SupplierRow> allRows, VBox tableBody) {
+    private static void showAddDialog(int userId, String username, String role,
+                                      List<SupplierRow> allRows, VBox tableBody,
+                                      List<Button> allFilterBtns) {
         TextField nameField = new TextField(); nameField.setPromptText("اسم المورد");
         TextField phoneField = new TextField(); phoneField.setPromptText("رقم التليفون");
         TextField sectorField = new TextField(); sectorField.setPromptText("القطاع");
         TextField floorField = new TextField(); floorField.setPromptText("الأرضية");
 
-        // اختيار المخزن (اختياري)
         List<Warehouse> warehouses = WarehouseDAO.getAllWarehouses();
         ComboBox<String> warehouseCombo = new ComboBox<>();
         warehouseCombo.getItems().add("مورد عام (بدون مخزن)");
@@ -226,7 +247,6 @@ public class SuppliersContent {
 
             SupplierDAO.addSupplier(name, phoneField.getText().trim(), sectorField.getText().trim(), floor, userId);
 
-            // لو اختار مخزن
             String selected = warehouseCombo.getValue();
             if (selected != null && selected.contains("|")) {
                 int warehouseId = Integer.parseInt(selected.split("\\|")[0]);
@@ -239,7 +259,6 @@ public class SuppliersContent {
                 }
             }
 
-            // تحديث القائمة
             loadSupplierRows(allRows, userId, role);
             renderTable(tableBody, allRows, null, userId, username, role);
             dialog.close();
@@ -254,7 +273,7 @@ public class SuppliersContent {
         return btn;
     }
 
-    private static void setActive(Button active, Button... all) {
+    private static void setActiveFromList(Button active, List<Button> all) {
         for (Button b : all) {
             if (b == active)
                 b.setStyle("-fx-font-size: 11px; -fx-padding: 4 12; -fx-border-radius: 4; -fx-background-radius: 4; -fx-background-color: #3B6D11; -fx-text-fill: white; -fx-cursor: hand;");

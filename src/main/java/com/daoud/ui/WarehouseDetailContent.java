@@ -67,7 +67,8 @@ public class WarehouseDetailContent {
         HBox.setHgrow(supplierCombo, Priority.ALWAYS);
 
         // ── حقول دخول البضاعة ──
-        TextField totalWeightField = new TextField(); totalWeightField.setPromptText("الوزن الإجمالي (كيلو)");
+        TextField totalWeightField = new TextField();
+        totalWeightField.setPromptText("الوزن الإجمالي (كيلو)");
         TextField deductionField = new TextField(); deductionField.setPromptText("نسبة الخصم %");
         TextField priceField = new TextField(); priceField.setPromptText("سعر الكيلو");
 
@@ -395,7 +396,7 @@ public class WarehouseDetailContent {
                 new Label("المورد:"), supplierRow,
                 new HBox(12,
                         new VBox(4, new Label("الوزن الإجمالي:"), totalWeightField),
-                        new VBox(4, new Label("كمية الخصم (كيلو):"), deductionField),
+                        new VBox(4, new Label("كمية الخصم (مئوية):"), deductionField),
                         new VBox(4, new Label("سعر الكيلو:"), priceField)),
                 new HBox(16, pctLabel, netLabel, totalLabel),
                 saveEntryBtn, entryMsg);
