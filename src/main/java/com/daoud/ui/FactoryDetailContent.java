@@ -180,8 +180,9 @@ public class FactoryDetailContent {
 
     private static void loadRows(List<HistoryRow> rows, int factoryId) {
         // شحنات
-        String sql1 = "SELECT id, shipment_date, net_weight, deduction_pct, total_amount, COALESCE(supplier_name,'') as notes " +
+        String sql1 = "SELECT id, shipment_date, net_weight, deduction_pct, deduction_kg, price_per_kg, total_amount, COALESCE(supplier_name,'') as supplier_name " +
                 "FROM factory_shipments WHERE factory_id = ? ORDER BY shipment_date DESC LIMIT 30";
+
         try (Connection conn = DatabaseManager_online.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql1)) {
             stmt.setInt(1, factoryId);

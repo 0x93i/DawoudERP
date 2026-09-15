@@ -875,7 +875,6 @@ public class ShipmentsContent {
                     stmt2.executeUpdate();
                 }
 
-
                 // تحديث الجدول
 
                 loadShipments(
