@@ -24,26 +24,14 @@ public class ShipmentsContent {
         VBox tableBox = new VBox(0);
         loadShipments(tableBox, "all");
 
-        // ── فلاتر ──
-        Button allBtn = new Button("الكل"); allBtn.getStyleClass().add("btn-primary");
-        Button pendingBtn = new Button("في الطريق"); pendingBtn.getStyleClass().add("btn-default");
-        Button completedBtn = new Button("مكتمل"); completedBtn.getStyleClass().add("btn-default");
-        Button partialBtn = new Button("مدفوع جزئي"); partialBtn.getStyleClass().add("btn-default");
 
-        allBtn.setOnAction(e -> { loadShipments(tableBox, "all"); setActive(allBtn, pendingBtn, completedBtn, partialBtn); });
-        pendingBtn.setOnAction(e -> { loadShipments(tableBox, "pending"); setActive(pendingBtn, allBtn, completedBtn, partialBtn); });
-        completedBtn.setOnAction(e -> { loadShipments(tableBox, "completed"); setActive(completedBtn, allBtn, pendingBtn, partialBtn); });
-        partialBtn.setOnAction(e -> { loadShipments(tableBox, "partial"); setActive(partialBtn, allBtn, pendingBtn, completedBtn); });
-
-        HBox filters = new HBox(8, allBtn, pendingBtn, completedBtn, partialBtn);
-        filters.setAlignment(Pos.CENTER_RIGHT);
 
         // ── زر إضافة ──
         Button addBtn = new Button("+ شحنة جديدة");
         addBtn.getStyleClass().add("btn-primary");
         addBtn.setOnAction(e -> showAddDialog(userId, tableBox));
 
-        HBox topBar = new HBox(10, filters, new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }}, addBtn);
+        HBox topBar = new HBox(10, new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }}, addBtn);
         topBar.setAlignment(Pos.CENTER_RIGHT);
 
         // ── Header الجدول ──
@@ -79,7 +67,8 @@ public class ShipmentsContent {
             sql = """
                 SELECT sh.id, sh.shipment_number, s.name as supplier, f.name as factory,
                        sh.net_weight, sh.price_per_kg, sh.total_amount,
-                       sh.cost_loading + sh.cost_workers + sh.cost_fuel + sh.cost_transport + sh.cost_other as total_costs,
+                        sh.cost_loading + sh.cost_workers + sh.cost_fuel + sh.cost_transport + sh.cost_other as total_costs,
+                        sh.sale_total, sh.purchase_total,
                        sh.status, sh.shipment_date
                 FROM shipments sh
                 LEFT JOIN suppliers s ON sh.supplier_id = s.id
@@ -91,6 +80,7 @@ public class ShipmentsContent {
                 SELECT sh.id, sh.shipment_number, s.name as supplier, f.name as factory,
                        sh.net_weight, sh.price_per_kg, sh.total_amount,
                        sh.cost_loading + sh.cost_workers + sh.cost_fuel + sh.cost_transport + sh.cost_other as total_costs,
+                       sh.sale_total, sh.purchase_total,
                        sh.status, sh.shipment_date
                 FROM shipments sh
                 LEFT JOIN suppliers s ON sh.supplier_id = s.id
@@ -106,10 +96,12 @@ public class ShipmentsContent {
             while (rs.next()) {
                 hasRows = true;
                 int id = rs.getInt("id");
+                double costs = rs.getDouble("total_costs");
+                double saleTotal = rs.getDouble("sale_total");
+                double purchaseTotal = rs.getDouble("purchase_total");
                 double netWeight = rs.getDouble("net_weight");
                 double total = rs.getDouble("total_amount");
-                double costs = rs.getDouble("total_costs");
-                double profit = total - costs;
+                double profit = saleTotal - (purchaseTotal + costs);
                 String status = rs.getString("status");
 
                 HBox row = new HBox();
@@ -315,8 +307,7 @@ public class ShipmentsContent {
                 double grossProfit =
                         saleTotal - purchaseTotal;
 
-                double netProfit =
-                        grossProfit - costs;
+                double netProfit = saleTotal - (purchaseTotal + costs);
 
 
                 // =========================
@@ -919,10 +910,13 @@ public class ShipmentsContent {
             ResultSet rs = stmt.executeQuery();
             if (!rs.next()) return;
 
-            double total = rs.getDouble("total_amount");
+            double saleTotal = rs.getDouble("sale_total");
+            double purchaseTotal = rs.getDouble("purchase_total");
             double costs = rs.getDouble("cost_loading") + rs.getDouble("cost_workers") +
                     rs.getDouble("cost_fuel") + rs.getDouble("cost_transport") + rs.getDouble("cost_other");
-            double profit = total - costs;
+            double profit = saleTotal - (purchaseTotal + costs);
+            double total = rs.getDouble("total_amount");
+
 
             VBox infoBox = new VBox(8);
             infoBox.setStyle("-fx-padding: 10;");

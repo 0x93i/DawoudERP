@@ -62,4 +62,18 @@ public class VaultHelper {
             default -> "cash";
         };
     }
+    public static double getBalance(int vaultId, String paymentType) {
+        String sql = "SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE -amount END), 0) " +
+                "FROM vault_transactions WHERE vault_id = ? AND payment_type = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, vaultId);
+            stmt.setString(2, paymentType);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getDouble(1);
+        } catch (SQLException e) {
+            System.err.println("Balance check error: " + e.getMessage());
+        }
+        return 0;
+    }
 }

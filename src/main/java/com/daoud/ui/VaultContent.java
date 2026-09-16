@@ -28,8 +28,78 @@ public class VaultContent {
         ComboBox<String> paymentCombo = new ComboBox<>(FXCollections.observableArrayList("كاش", "بنك", "محفظة", "شيك"));
         paymentCombo.setPromptText("نوع الدفع"); paymentCombo.setMaxWidth(Double.MAX_VALUE);
         TextField amountField = new TextField(); amountField.setPromptText("المبلغ"); amountField.setMaxWidth(Double.MAX_VALUE);
-        TextField categoryField = new TextField(); categoryField.setPromptText("التصنيف"); categoryField.setMaxWidth(Double.MAX_VALUE);
         TextField notesField = new TextField(); notesField.setPromptText("ملاحظة"); notesField.setMaxWidth(Double.MAX_VALUE);
+
+        // ── وجهة الصرف (للخروج فقط) ──
+        ComboBox<String> targetTypeCombo = new ComboBox<>(FXCollections.observableArrayList("مصاريف", "مورد", "عامل"));
+        targetTypeCombo.setPromptText("الصرف لمين؟"); targetTypeCombo.setMaxWidth(Double.MAX_VALUE);
+
+        ComboBox<com.daoud.model.Supplier> supplierCombo = new ComboBox<>(
+                FXCollections.observableArrayList(com.daoud.dao.SupplierDAO.getAllSuppliers()));
+        supplierCombo.setPromptText("اختار المورد"); supplierCombo.setMaxWidth(Double.MAX_VALUE);
+        supplierCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(com.daoud.model.Supplier item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        supplierCombo.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(com.daoud.model.Supplier item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+
+        ComboBox<com.daoud.model.Worker> workerCombo = new ComboBox<>();
+        workerCombo.setPromptText("اختار العامل"); workerCombo.setMaxWidth(Double.MAX_VALUE);
+        workerCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(com.daoud.model.Worker item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        workerCombo.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(com.daoud.model.Worker item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        // كل العمال من كل المخازن
+        List<com.daoud.model.Worker> allWorkers = new ArrayList<>();
+        for (com.daoud.model.Warehouse w : com.daoud.dao.WarehouseDAO.getAllWarehouses())
+            allWorkers.addAll(com.daoud.dao.WorkerDAO.getWorkersByWarehouse(w.getId()));
+        allWorkers.addAll(com.daoud.dao.WorkerDAO.getWorkersByWarehouse(-1));
+        workerCombo.getItems().setAll(allWorkers);
+
+        TextField expenseDetailsField = new TextField();
+        expenseDetailsField.setPromptText("تفاصيل المصروف");
+        expenseDetailsField.setMaxWidth(Double.MAX_VALUE);
+
+        VBox targetBox = new VBox(8);
+        targetBox.setVisible(false); targetBox.setManaged(false);
+        VBox targetTypeRow = new VBox(4, new Label("الصرف لمين:"), targetTypeCombo);
+        VBox supplierRow = new VBox(4, new Label("المورد:"), supplierCombo);
+        VBox workerRow = new VBox(4, new Label("العامل:"), workerCombo);
+        VBox expenseRow = new VBox(4, new Label("تفاصيل المصروف:"), expenseDetailsField);
+        supplierRow.setVisible(false); supplierRow.setManaged(false);
+        workerRow.setVisible(false); workerRow.setManaged(false);
+        expenseRow.setVisible(false); expenseRow.setManaged(false);
+        targetBox.getChildren().addAll(targetTypeRow, supplierRow, workerRow, expenseRow);
+
+        directionCombo.setOnAction(ev -> {
+            boolean isOut = "خروج".equals(directionCombo.getValue());
+            targetBox.setVisible(isOut); targetBox.setManaged(isOut);
+            if (!isOut) targetTypeCombo.setValue(null);
+        });
+
+        targetTypeCombo.setOnAction(ev -> {
+            String t = targetTypeCombo.getValue();
+            boolean isSup = "مورد".equals(t), isWork = "عامل".equals(t), isExp = "مصاريف".equals(t);
+            supplierRow.setVisible(isSup); supplierRow.setManaged(isSup);
+            workerRow.setVisible(isWork); workerRow.setManaged(isWork);
+            expenseRow.setVisible(isExp); expenseRow.setManaged(isExp);
+        });
+
         Button saveBtn = new Button("تسجيل"); saveBtn.getStyleClass().add("btn-primary");
         Label saveMsg = new Label("");
 
@@ -42,21 +112,60 @@ public class VaultContent {
         saveBtn.setOnAction(e -> {
             if (directionCombo.getValue() == null) { saveMsg.setText("اختار دخول/خروج"); return; }
             if (paymentCombo.getValue() == null) { saveMsg.setText("اختار نوع الدفع"); return; }
+
+            boolean isOut = "خروج".equals(directionCombo.getValue());
+            String category;
+
+            if (isOut) {
+                String t = targetTypeCombo.getValue();
+                if (t == null) { saveMsg.setText("اختار الصرف لمين"); return; }
+                if (t.equals("مورد")) {
+                    if (supplierCombo.getValue() == null) { saveMsg.setText("اختار المورد"); return; }
+                    category = "مورد: " + supplierCombo.getValue().getName();
+                } else if (t.equals("عامل")) {
+                    if (workerCombo.getValue() == null) { saveMsg.setText("اختار العامل"); return; }
+                    category = "عامل: " + workerCombo.getValue().getName();
+                } else {
+                    if (expenseDetailsField.getText().trim().isEmpty()) { saveMsg.setText("اكتب تفاصيل المصروف"); return; }
+                    category = "مصاريف: " + expenseDetailsField.getText().trim();
+                }
+            } else {
+                category = "دخول";
+            }
+
             try {
                 double amount = Double.parseDouble(amountField.getText().trim());
-                String direction = directionCombo.getValue().equals("دخول") ? "in" : "out";
+                String direction = isOut ? "out" : "in";
                 String paymentType = switch (paymentCombo.getValue()) {
                     case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
                 };
+
+                // التحقق من الرصيد عند الخروج
+                if (isOut) {
+                    double available = com.daoud.db.VaultHelper.getBalance(treasuryId, paymentType);
+                    if (amount > available) {
+                        saveMsg.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
+                        return;
+                    }
+                }
+
                 String sql = "INSERT INTO vault_transactions (vault_id, transaction_date, direction, payment_type, amount, category, notes, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
                 try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, treasuryId); stmt.setString(2, direction); stmt.setString(3, paymentType);
-                    stmt.setDouble(4, amount); stmt.setString(5, categoryField.getText().trim());
+                    stmt.setDouble(4, amount); stmt.setString(5, category);
                     stmt.setString(6, notesField.getText().trim()); stmt.setInt(7, userId);
                     stmt.executeUpdate();
                 }
-                amountField.clear(); categoryField.clear(); notesField.clear();
+
+                amountField.clear(); notesField.clear(); expenseDetailsField.clear();
                 directionCombo.setValue(null); paymentCombo.setValue(null);
+                targetTypeCombo.setValue(null);
+                supplierCombo.setValue(null); workerCombo.setValue(null);
+                targetBox.setVisible(false); targetBox.setManaged(false);
+                supplierRow.setVisible(false); supplierRow.setManaged(false);
+                workerRow.setVisible(false); workerRow.setManaged(false);
+                expenseRow.setVisible(false); expenseRow.setManaged(false);
+
                 saveMsg.setText("تم ✓");
                 refreshSummary(summaryCard, treasuryId, treasuryName);
                 allRows.clear(); loadRows(allRows, treasuryId);
@@ -69,12 +178,11 @@ public class VaultContent {
         Label addTitle = new Label("تسجيل معاملة"); addTitle.getStyleClass().add("card-title");
         addCard.getChildren().addAll(addTitle,
                 new HBox(8, new VBox(4, new Label("الاتجاه:"), directionCombo), new VBox(4, new Label("نوع الدفع:"), paymentCombo)),
-                new HBox(8, new VBox(4, new Label("المبلغ:"), amountField), new VBox(4, new Label("التصنيف:"), categoryField)),
+                new VBox(4, new Label("المبلغ:"), amountField),
+                targetBox,
                 new VBox(4, new Label("ملاحظة:"), notesField), saveBtn, saveMsg);
 
         HBox.setHgrow(directionCombo, Priority.ALWAYS); HBox.setHgrow(paymentCombo, Priority.ALWAYS);
-        HBox.setHgrow(amountField, Priority.ALWAYS); HBox.setHgrow(categoryField, Priority.ALWAYS);
-
         VBox historyCard = new VBox(8); historyCard.getStyleClass().add("card");
         Label histTitle = new Label("سجل المعاملات"); histTitle.getStyleClass().add("card-title");
         historyCard.getChildren().addAll(histTitle, filtersBox, buildTableHeader(), tableBody);

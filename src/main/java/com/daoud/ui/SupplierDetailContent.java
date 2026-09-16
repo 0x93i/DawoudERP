@@ -110,18 +110,36 @@ public class SupplierDetailContent {
             try {
                 double amount = Double.parseDouble(withdrawField.getText().trim());
                 String method = paymentMethodCombo.getValue();
+
+                // تحديد الخزنة
+                int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
+                int treasuryId = (warehouseId == -1)
+                        ? VaultHelper.getAdminTreasuryId()
+                        : VaultHelper.getWarehouseTreasuryId(warehouseId);
+                String payType = VaultHelper.toPaymentType(method);
+
+                // التحقق من الرصيد
+                double available = VaultHelper.getBalance(treasuryId, payType);
+                if (amount > available) {
+                    withdrawError.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
+                    return;
+                }
+
                 String sql = "INSERT INTO supplier_withdrawals (supplier_id, amount, withdrawal_date, payment_method, recorded_by, notes) VALUES (?, ?, CURRENT_DATE, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, supplier.getId()); stmt.setDouble(2, amount);
-                    stmt.setString(3, method); stmt.setInt(4, userId);
+                try (Connection conn = DatabaseManager_online.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setInt(1, supplier.getId());
+                    stmt.setDouble(2, amount);
+                    stmt.setString(3, method);
+                    stmt.setInt(4, userId);
                     stmt.setString(5, withdrawNotes.getText().trim());
                     stmt.executeUpdate();
-                    int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
-                    int treasuryId = VaultHelper.getWarehouseTreasuryId(warehouseId);
-                    VaultHelper.record(treasuryId, "out",
-                            VaultHelper.toPaymentType(paymentMethodCombo.getValue()),
-                            amount, "سحب مورد: " + supplier.getName(), withdrawNotes.getText().trim(), userId);
+
+                    VaultHelper.record(treasuryId, "out", payType,
+                            amount, "سحب مورد: " + supplier.getName(),
+                            withdrawNotes.getText().trim(), userId);
                 }
+
                 withdrawField.clear(); withdrawNotes.clear();
                 withdrawError.setText("تم ✓");
                 refreshBalance(balanceLabel, supplier.getId());
@@ -152,7 +170,10 @@ public class SupplierDetailContent {
                     SupplierDAO.settleSupplier(supplier.getId(), paid, newFloor, userId);
                     if (paid > 0) {
                         int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
-                        int vaultId = com.daoud.db.VaultHelper.getWarehouseTreasuryId(warehouseId);
+                        int vaultId = (warehouseId == -1)
+                                ? com.daoud.db.VaultHelper.getAdminTreasuryId()
+                                : com.daoud.db.VaultHelper.getWarehouseTreasuryId(warehouseId);
+
                         com.daoud.db.VaultHelper.record(vaultId, "out",
                                 com.daoud.db.VaultHelper.toPaymentType(methodCombo.getValue()),
                                 paid, "تسوية مورد: " + supplier.getName(), "", userId);
