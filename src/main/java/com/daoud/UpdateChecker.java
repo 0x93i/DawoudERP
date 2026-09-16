@@ -9,7 +9,7 @@ import java.net.*;
 
 public class UpdateChecker {
 
-    private static final String CURRENT_VERSION = "2.8";
+    private static final String CURRENT_VERSION = "2.9";
     private static final String GITHUB_API = "https://api.github.com/repos/0x93i/DawoudERP/releases/latest";
 
     public static void check() {
