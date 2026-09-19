@@ -5,7 +5,6 @@ import com.daoud.dao.WarehouseDAO;
 import com.daoud.model.Supplier;
 import com.daoud.model.Warehouse;
 import com.daoud.db.DatabaseManager_online;
-import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -21,11 +20,45 @@ public class SuppliersContent {
 
     record SupplierRow(Supplier supplier, String warehouseName) {}
 
+    /** نتيجة تحميل الشاشة كلها مرة واحدة في الخلفية. */
+    private record InitialData(List<Warehouse> warehouses, List<SupplierRow> rows) {}
+
     public static Node build(int userId, String username, String role) {
 
+        VBox root = new VBox(12);
+
+        VBox loadingCard = new VBox(10);
+        loadingCard.getStyleClass().add("card");
+        Label loadingLbl = new Label("جاري تحميل الموردين...");
+        loadingLbl.setStyle("-fx-text-fill: #888780; -fx-padding: 20; -fx-font-size: 13px;");
+        loadingCard.getChildren().add(loadingLbl);
+        root.getChildren().add(loadingCard);
+
+        // ── تحميل بيانات الشاشة (المخازن + الموردين) في الخلفية عشان الواجهة متفريزش ──
+        AsyncHelper.run(
+                () -> {
+                    List<Warehouse> warehouses = WarehouseDAO.getAllWarehouses();
+                    List<SupplierRow> rows = new ArrayList<>();
+                    loadSupplierRows(rows, userId, role);
+                    return new InitialData(warehouses, rows);
+                },
+                data -> {
+                    root.getChildren().setAll(buildCard(data.warehouses(), data.rows(), userId, username, role));
+                },
+                error -> {
+                    Label errLbl = new Label("حصل خطأ في تحميل الموردين، حاول تفتح الشاشة تاني");
+                    errLbl.setStyle("-fx-text-fill: #b91c1c; -fx-padding: 20; -fx-font-size: 13px;");
+                    root.getChildren().setAll(errLbl);
+                }
+        );
+
+        return root;
+    }
+
+    private static Node buildCard(List<Warehouse> warehouses, List<SupplierRow> allRows,
+                                  int userId, String username, String role) {
+
         VBox tableBody = new VBox(0);
-        List<SupplierRow> allRows = new ArrayList<>();
-        loadSupplierRows(allRows, userId, role);
 
         // ── فلاتر ──
         List<Button> allFilterBtns = new ArrayList<>();
@@ -38,7 +71,6 @@ public class SuppliersContent {
         allFilterBtns.add(generalBtn);
 
         // فلتر لكل مخزن
-        List<Warehouse> warehouses = WarehouseDAO.getAllWarehouses();
         List<Button> warehouseBtns = new ArrayList<>();
         for (Warehouse w : warehouses) {
             Button wBtn = filterBtn("🏭 " + w.getName());
@@ -51,7 +83,6 @@ public class SuppliersContent {
             });
         }
 
-        Button[] allBtnsArr = allFilterBtns.toArray(new Button[0]);
         setActiveFromList(allBtn, allFilterBtns);
 
         allBtn.setOnAction(e -> {
@@ -93,19 +124,51 @@ public class SuppliersContent {
         return new VBox(12, card);
     }
 
+
     private static void loadSupplierRows(List<SupplierRow> rows, int userId, String role) {
         rows.clear();
-        List<Supplier> suppliers;
         if (role.equals("admin")) {
-            suppliers = SupplierDAO.getAllSuppliers();
+            // استعلام واحد بيرجع كل الموردين + اسم مخزن كل واحد فيهم مع بعض
+            // (بدل ما كان بيعمل استعلام منفصل لكل مورد لوحده - ده كان أبطأ حاجة في الشاشة)
+            rows.addAll(loadAllSupplierRowsWithWarehouse());
         } else {
+            // مسؤول المخزن أصلاً بيشوف موردين مخزنه بس، يعني اسم المخزن معروف من غير أي استعلام إضافي
             Warehouse w = WarehouseDAO.getWarehouseByManager(userId);
-            suppliers = w != null ? WarehouseDAO.getSuppliersByWarehouse(w.getId()) : new ArrayList<>();
+            if (w != null) {
+                List<Supplier> suppliers = WarehouseDAO.getSuppliersByWarehouse(w.getId());
+                for (Supplier s : suppliers) rows.add(new SupplierRow(s, w.getName()));
+            }
         }
-        for (Supplier s : suppliers) {
-            String warehouseName = getSupplierWarehouseName(s.getId());
-            rows.add(new SupplierRow(s, warehouseName));
+    }
+
+    private static List<SupplierRow> loadAllSupplierRowsWithWarehouse() {
+        List<SupplierRow> rows = new ArrayList<>();
+        String sql = """
+            SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date,
+                   (SELECT w.name FROM warehouses w
+                    JOIN warehouse_suppliers ws ON w.id = ws.warehouse_id
+                    WHERE ws.supplier_id = s.id LIMIT 1) AS warehouse_name
+            FROM suppliers s
+            ORDER BY s.name
+        """;
+        try (Connection conn = DatabaseManager_online.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                Supplier s = new Supplier(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("phone"),
+                        rs.getString("sector"),
+                        rs.getDouble("floor_amount"),
+                        rs.getString("floor_date")
+                );
+                rows.add(new SupplierRow(s, rs.getString("warehouse_name")));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
         }
+        return rows;
     }
 
     private static String getSupplierWarehouseName(int supplierId) {
@@ -245,23 +308,46 @@ public class SuppliersContent {
                     floor = Double.parseDouble(floorField.getText().trim());
             } catch (NumberFormatException ex) { errorLbl.setText("الأرضية لازم رقم"); return; }
 
-            SupplierDAO.addSupplier(name, phoneField.getText().trim(), sectorField.getText().trim(), floor, userId);
+            final String phone = phoneField.getText().trim();
+            final String sector = sectorField.getText().trim();
+            final double finalFloor = floor;
+            final String selected = warehouseCombo.getValue();
 
-            String selected = warehouseCombo.getValue();
-            if (selected != null && selected.contains("|")) {
-                int warehouseId = Integer.parseInt(selected.split("\\|")[0]);
-                List<Supplier> all = SupplierDAO.getAllSuppliers();
-                for (Supplier s : all) {
-                    if (s.getName().equals(name)) {
-                        WarehouseDAO.assignSupplierToWarehouse(warehouseId, s.getId());
-                        break;
-                    }
-                }
-            }
+            errorLbl.setStyle("-fx-text-fill: #5f5e5a;");
+            errorLbl.setText("جاري الحفظ...");
 
-            loadSupplierRows(allRows, userId, role);
-            renderTable(tableBody, allRows, null, userId, username, role);
-            dialog.close();
+            // ── الحفظ + إعادة تحميل الجدول في الخلفية عشان الـ dialog ميهنجش ──
+            AsyncHelper.run(
+                    () -> {
+                        SupplierDAO.addSupplier(name, phone, sector, finalFloor, userId);
+
+                        if (selected != null && selected.contains("|")) {
+                            int warehouseId = Integer.parseInt(selected.split("\\|")[0]);
+                            List<Supplier> all = SupplierDAO.getAllSuppliers();
+                            for (Supplier s : all) {
+                                if (s.getName().equals(name)) {
+                                    WarehouseDAO.assignSupplierToWarehouse(warehouseId, s.getId());
+                                    break;
+                                }
+                            }
+                        }
+
+                        List<SupplierRow> freshRows = new ArrayList<>();
+                        loadSupplierRows(freshRows, userId, role);
+                        return freshRows;
+                    },
+                    freshRows -> {
+                        allRows.clear();
+                        allRows.addAll(freshRows);
+                        renderTable(tableBody, allRows, null, userId, username, role);
+                        dialog.close();
+                    },
+                    error -> {
+                        errorLbl.setStyle("-fx-text-fill: #b91c1c;");
+                        errorLbl.setText("حصل خطأ أثناء الحفظ، حاول تاني");
+                    },
+                    saveBtn
+            );
         });
 
         dialog.show();
