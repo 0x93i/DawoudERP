@@ -14,9 +14,12 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class WarehouseDetailContent {
+
+    private record StockData(double totalIn, double green, double colored, double white, double waste) {}
 
     public static Node build(int userId, String username, String role, Warehouse warehouse) {
 
@@ -24,22 +27,33 @@ public class WarehouseDetailContent {
         VBox stockCard = new VBox(10);
         stockCard.getStyleClass().add("card");
         stockCard.setMaxWidth(Double.MAX_VALUE);
+        Label stockTitle = new Label("إجمالي البضاعة في المخزن"); stockTitle.getStyleClass().add("card-title");
+        Label stockLoading = new Label("جاري التحميل...");
+        stockLoading.setStyle("-fx-text-fill: #888780; -fx-font-size: 12px;");
+        stockCard.getChildren().addAll(stockTitle, stockLoading);
         refreshStockCard(stockCard, warehouse.getId());
 
         // ── قائمة الموردين ──
-        List<Supplier> suppliers = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
-        javafx.collections.ObservableList<Supplier> supplierObsList = FXCollections.observableArrayList(suppliers);
-        ListView<Supplier> suppliersList = new ListView<>(supplierObsList);
-        suppliersList.setPrefHeight(180);
+        ListView<Supplier> suppliersList = new ListView<>();
+        suppliersList.setPrefHeight(300);
+        suppliersList.setMinHeight(200);
+        suppliersList.setFixedCellSize(35);
+        suppliersList.setPlaceholder(new Label("جاري تحميل الموردين..."));
         suppliersList.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Supplier item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.getName());
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setText(item.getName());
+                    setStyle("-fx-font-size: 13px; -fx-text-fill: #1a1a18; -fx-padding: 6 12;");
+                }
             }
         });
 
-        ComboBox<Supplier> supplierCombo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
+        ComboBox<Supplier> supplierCombo = new ComboBox<>();
         supplierCombo.setPromptText("اختار المورد");
         supplierCombo.setMaxWidth(Double.MAX_VALUE);
         supplierCombo.setCellFactory(lv -> new ListCell<>() {
@@ -56,6 +70,8 @@ public class WarehouseDetailContent {
                 setText(empty || item == null ? null : item.getName());
             }
         });
+
+        loadSuppliers(supplierCombo, suppliersList, warehouse.getId());
 
         Button addNewSupplierBtn = new Button("+ مورد جديد");
         addNewSupplierBtn.getStyleClass().add("btn-default");
@@ -111,38 +127,47 @@ public class WarehouseDetailContent {
                 double pct = deductionField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionField.getText().trim());
                 double price = priceField.getText().trim().isEmpty() ? 0 : Double.parseDouble(priceField.getText().trim());
                 double ded = gross * (pct / 100.0);
+                int supplierId = supplierCombo.getValue().getId();
 
-                String sql = "INSERT INTO warehouse_stock_entries " +
-                        "(warehouse_id, supplier_id, entry_date, total_weight, recorded_by) " +
-                        "VALUES (?, ?, CURRENT_DATE, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, warehouse.getId());
-                    stmt.setInt(2, supplierCombo.getValue().getId());
-                    stmt.setDouble(3, gross - ded);
-                    stmt.setInt(4, userId);
-                    stmt.executeUpdate();
-                }
+                entryMsg.setText("جاري الحفظ...");
 
-                String supplierSql = "INSERT INTO supplier_transactions " +
-                        "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) " +
-                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(supplierSql)) {
-                    stmt.setInt(1, supplierCombo.getValue().getId());
-                    stmt.setDouble(2, gross); stmt.setDouble(3, ded);
-                    stmt.setDouble(4, price); stmt.setInt(5, userId);
-                    stmt.executeUpdate();
-                }
+                AsyncHelper.runVoid(
+                        () -> {
+                            String sql = "INSERT INTO warehouse_stock_entries " +
+                                    "(warehouse_id, supplier_id, entry_date, total_weight, recorded_by) " +
+                                    "VALUES (?, ?, CURRENT_DATE, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                                stmt.setInt(1, warehouse.getId());
+                                stmt.setInt(2, supplierId);
+                                stmt.setDouble(3, gross - ded);
+                                stmt.setInt(4, userId);
+                                stmt.executeUpdate();
+                            }
 
-                totalWeightField.clear(); deductionField.clear(); priceField.clear();
-                pctLabel.setText("نسبة الخصم: —");
-                netLabel.setText("الوزن الصافي: —");
-                totalLabel.setText("الإجمالي: —");
-                entryMsg.setText("تم ✓");
-                refreshStockCard(stockCard, warehouse.getId());
-            } catch (NumberFormatException ex) { entryMsg.setText("ادخل أرقام صحيحة");
-            } catch (SQLException ex) { entryMsg.setText("خطأ: " + ex.getMessage()); }
+                            String supplierSql = "INSERT INTO supplier_transactions " +
+                                    "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(supplierSql)) {
+                                stmt.setInt(1, supplierId);
+                                stmt.setDouble(2, gross); stmt.setDouble(3, ded);
+                                stmt.setDouble(4, price); stmt.setInt(5, userId);
+                                stmt.executeUpdate();
+                            }
+                        },
+                        () -> {
+                            totalWeightField.clear(); deductionField.clear(); priceField.clear();
+                            pctLabel.setText("نسبة الخصم: —");
+                            netLabel.setText("الوزن الصافي: —");
+                            totalLabel.setText("الإجمالي: —");
+                            entryMsg.setText("تم ✓");
+                            refreshStockCard(stockCard, warehouse.getId());
+                        },
+                        error -> entryMsg.setText("خطأ: " + (error != null ? error.getMessage() : "")),
+                        saveEntryBtn
+                );
+            } catch (NumberFormatException ex) { entryMsg.setText("ادخل أرقام صحيحة"); }
         });
 
         // ── خروج بضاعة ──
@@ -152,14 +177,20 @@ public class WarehouseDetailContent {
         TextField exitWasteField = new TextField(); exitWasteField.setPromptText("0");
         TextField exitPriceField = new TextField(); exitPriceField.setPromptText("سعر الشراء / كيلو");
 
-        List<com.daoud.model.Factory> factories = com.daoud.dao.FactoryDAO.getAllFactories();
+        // بتتحمل في الخلفية وتتضاف لنفس القايمة دي لما تجهز (القايمة نفسها بتتلمس من داخل الأكشن بعدين)
+        List<com.daoud.model.Factory> factories = new ArrayList<>();
         ComboBox<String> destinationCombo = new ComboBox<>();
         destinationCombo.getItems().add("عم داود");
-        for (com.daoud.model.Factory f : factories) {
-            destinationCombo.getItems().add("مصنع: " + f.getName());
-        }
         destinationCombo.setPromptText("اختار الوجهة");
         destinationCombo.setMaxWidth(Double.MAX_VALUE);
+
+        AsyncHelper.run(
+                com.daoud.dao.FactoryDAO::getAllFactories,
+                loaded -> {
+                    factories.addAll(loaded);
+                    for (com.daoud.model.Factory f : loaded) destinationCombo.getItems().add("مصنع: " + f.getName());
+                }
+        );
 
         Label exitTotalLabel = new Label("الإجمالي: —");
         Label exitValueLabel = new Label("قيمة الشراء: —");
@@ -271,48 +302,55 @@ public class WarehouseDetailContent {
                             double sellPrice = Double.parseDouble(sellPriceField.getText().trim());
                             double fNet = fGross - fDed;
                             double sellTotal = fNet * sellPrice;
-                            double grossProfit = sellTotal - purchaseTotal;
 
-                            // تسجيل في warehouse_stock_exits
-                            String exitSql = "INSERT INTO warehouse_stock_exits " +
-                                    "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
-                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(exitSql)) {
-                                stmt.setInt(1, warehouse.getId());
-                                stmt.setDouble(2, green); stmt.setDouble(3, colored);
-                                stmt.setDouble(4, white); stmt.setDouble(5, waste);
-                                stmt.setString(6, destination);
-                                stmt.setDouble(7, exitPrice);
-                                stmt.setDouble(8, totalKg * exitPrice);
-                                stmt.setInt(9, userId);
-                                stmt.executeUpdate();
-                            }
+                            shipErr.setText("جاري الحفظ...");
 
-                            // تسجيل في factory_shipments
-                            String shipSql = "INSERT INTO factory_shipments " +
-                                    "(factory_id, shipment_date, gross_weight, deduction_kg, net_weight, price_per_kg, total_amount, recorded_by) " +
-                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(shipSql)) {
-                                stmt.setInt(1, finalFactory.getId());
-                                stmt.setDouble(2, fGross); stmt.setDouble(3, fDed);
-                                stmt.setDouble(4, fNet); stmt.setDouble(5, sellPrice);
-                                stmt.setDouble(6, sellTotal);
-                                stmt.setInt(7, userId);
-                                stmt.executeUpdate();
-                            }
+                            AsyncHelper.runVoid(
+                                    () -> {
+                                        // تسجيل في warehouse_stock_exits
+                                        String exitSql = "INSERT INTO warehouse_stock_exits " +
+                                                "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
+                                                "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(exitSql)) {
+                                            stmt.setInt(1, warehouse.getId());
+                                            stmt.setDouble(2, green); stmt.setDouble(3, colored);
+                                            stmt.setDouble(4, white); stmt.setDouble(5, waste);
+                                            stmt.setString(6, destination);
+                                            stmt.setDouble(7, exitPrice);
+                                            stmt.setDouble(8, totalKg * exitPrice);
+                                            stmt.setInt(9, userId);
+                                            stmt.executeUpdate();
+                                        }
 
-                            exitGreenField.clear(); exitColoredField.clear();
-                            exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
-                            exitTotalLabel.setText("الإجمالي: —");
-                            exitValueLabel.setText("قيمة الشراء: —");
-                            exitMsg.setText("تم تسجيل الشحنة ✓");
-                            refreshStockCard(stockCard, warehouse.getId());
-                            ((Stage) saveShipBtn.getScene().getWindow()).close();
+                                        // تسجيل في factory_shipments
+                                        String shipSql = "INSERT INTO factory_shipments " +
+                                                "(factory_id, shipment_date, gross_weight, deduction_kg, net_weight, price_per_kg, total_amount, recorded_by) " +
+                                                "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(shipSql)) {
+                                            stmt.setInt(1, finalFactory.getId());
+                                            stmt.setDouble(2, fGross); stmt.setDouble(3, fDed);
+                                            stmt.setDouble(4, fNet); stmt.setDouble(5, sellPrice);
+                                            stmt.setDouble(6, sellTotal);
+                                            stmt.setInt(7, userId);
+                                            stmt.executeUpdate();
+                                        }
+                                    },
+                                    () -> {
+                                        exitGreenField.clear(); exitColoredField.clear();
+                                        exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
+                                        exitTotalLabel.setText("الإجمالي: —");
+                                        exitValueLabel.setText("قيمة الشراء: —");
+                                        exitMsg.setText("تم تسجيل الشحنة ✓");
+                                        refreshStockCard(stockCard, warehouse.getId());
+                                        ((Stage) saveShipBtn.getScene().getWindow()).close();
+                                    },
+                                    error -> shipErr.setText("خطأ: " + (error != null ? error.getMessage() : "")),
+                                    saveShipBtn
+                            );
 
-                        } catch (NumberFormatException ex) { shipErr.setText("تأكد من الأرقام");
-                        } catch (SQLException ex) { shipErr.setText("خطأ: " + ex.getMessage()); }
+                        } catch (NumberFormatException ex) { shipErr.setText("تأكد من الأرقام"); }
                     });
 
                     VBox shipLayout = new VBox(10,
@@ -335,30 +373,37 @@ public class WarehouseDetailContent {
                 }
 
                 // لو عم داود — سجل مباشرة
-                String sql = "INSERT INTO warehouse_stock_exits " +
-                        "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
-                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, warehouse.getId());
-                    stmt.setDouble(2, green); stmt.setDouble(3, colored);
-                    stmt.setDouble(4, white); stmt.setDouble(5, waste);
-                    stmt.setString(6, destination);
-                    stmt.setDouble(7, exitPrice);
-                    stmt.setDouble(8, totalKg * exitPrice);
-                    stmt.setInt(9, userId);
-                    stmt.executeUpdate();
-                }
+                exitMsg.setText("جاري الحفظ...");
+                AsyncHelper.runVoid(
+                        () -> {
+                            String sql = "INSERT INTO warehouse_stock_exits " +
+                                    "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
+                                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                                stmt.setInt(1, warehouse.getId());
+                                stmt.setDouble(2, green); stmt.setDouble(3, colored);
+                                stmt.setDouble(4, white); stmt.setDouble(5, waste);
+                                stmt.setString(6, destination);
+                                stmt.setDouble(7, exitPrice);
+                                stmt.setDouble(8, totalKg * exitPrice);
+                                stmt.setInt(9, userId);
+                                stmt.executeUpdate();
+                            }
+                        },
+                        () -> {
+                            exitGreenField.clear(); exitColoredField.clear();
+                            exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
+                            exitTotalLabel.setText("الإجمالي: —");
+                            exitValueLabel.setText("قيمة الشراء: —");
+                            exitMsg.setText("تم ✓");
+                            refreshStockCard(stockCard, warehouse.getId());
+                        },
+                        error -> exitMsg.setText("خطأ: " + (error != null ? error.getMessage() : "")),
+                        saveExitBtn
+                );
 
-                exitGreenField.clear(); exitColoredField.clear();
-                exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
-                exitTotalLabel.setText("الإجمالي: —");
-                exitValueLabel.setText("قيمة الشراء: —");
-                exitMsg.setText("تم ✓");
-                refreshStockCard(stockCard, warehouse.getId());
-
-            } catch (NumberFormatException ex) { exitMsg.setText("تأكد من الأرقام");
-            } catch (SQLException ex) { exitMsg.setText("خطأ: " + ex.getMessage()); }
+            } catch (NumberFormatException ex) { exitMsg.setText("تأكد من الأرقام"); }
         });
 
         // ── موردي المخزن ──
@@ -447,6 +492,17 @@ public class WarehouseDetailContent {
         return content;
     }
 
+    private static void loadSuppliers(ComboBox<Supplier> combo, ListView<Supplier> list, int warehouseId) {
+        AsyncHelper.run(
+                () -> WarehouseDAO.getSuppliersByWarehouse(warehouseId),
+                suppliers -> {
+                    combo.setItems(FXCollections.observableArrayList(suppliers));
+                    list.setItems(FXCollections.observableArrayList(suppliers));
+                },
+                error -> list.setPlaceholder(new Label("حصل خطأ في تحميل الموردين"))
+        );
+    }
+
     private static void showAddSupplierDialog(int userId, String role, Warehouse warehouse,
                                               ComboBox<Supplier> combo, ListView<Supplier> list) {
         TextField nameField = new TextField(); nameField.setPromptText("اسم المورد");
@@ -478,31 +534,57 @@ public class WarehouseDetailContent {
                     floor = Double.parseDouble(floorField.getText().trim());
             } catch (NumberFormatException ex) { errLbl.setText("الأرضية لازم رقم"); return; }
 
-            SupplierDAO.addSupplier(nameField.getText().trim(), phoneField.getText().trim(),
-                    sectorField.getText().trim(), floor, userId);
+            final String name = nameField.getText().trim();
+            final String phone = phoneField.getText().trim();
+            final String sector = sectorField.getText().trim();
+            final double finalFloor = floor;
 
-            List<Supplier> all = SupplierDAO.getAllSuppliers();
-            for (Supplier s : all) {
-                if (s.getName().equals(nameField.getText().trim())) {
-                    WarehouseDAO.assignSupplierToWarehouse(warehouse.getId(), s.getId());
-                    break;
-                }
-            }
+            errLbl.setStyle("-fx-text-fill: #5f5e5a;");
+            errLbl.setText("جاري الحفظ...");
 
-            List<Supplier> updated = WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
-            combo.getItems().setAll(updated);
-            if (list != null) list.getItems().setAll(updated);
-            dialog.close();
+            AsyncHelper.run(
+                    () -> {
+                        SupplierDAO.addSupplier(name, phone, sector, finalFloor, userId);
+
+                        List<Supplier> all = SupplierDAO.getAllSuppliers();
+                        for (Supplier s : all) {
+                            if (s.getName().equals(name)) {
+                                WarehouseDAO.assignSupplierToWarehouse(warehouse.getId(), s.getId());
+                                break;
+                            }
+                        }
+
+                        return WarehouseDAO.getSuppliersByWarehouse(warehouse.getId());
+                    },
+                    updated -> {
+                        combo.getItems().setAll(updated);
+                        if (list != null) list.getItems().setAll(updated);
+                        dialog.close();
+                    },
+                    error -> {
+                        errLbl.setStyle("-fx-text-fill: #b91c1c;");
+                        errLbl.setText("حصل خطأ أثناء الحفظ");
+                    },
+                    saveBtn
+            );
         });
 
         dialog.show();
     }
 
     private static void refreshStockCard(VBox card, int warehouseId) {
-        card.getChildren().clear();
-        Label title = new Label("إجمالي البضاعة في المخزن"); title.getStyleClass().add("card-title");
-        card.getChildren().add(title);
+        AsyncHelper.run(
+                () -> loadStockData(warehouseId),
+                data -> renderStockCard(card, data),
+                error -> {
+                    card.getChildren().clear();
+                    Label title = new Label("إجمالي البضاعة في المخزن"); title.getStyleClass().add("card-title");
+                    card.getChildren().addAll(title, new Label("خطأ في تحميل البيانات"));
+                }
+        );
+    }
 
+    private static StockData loadStockData(int warehouseId) throws SQLException {
         try (Connection conn = DatabaseManager_online.getConnection()) {
             PreparedStatement es = conn.prepareStatement(
                     "SELECT COALESCE(SUM(total_weight), 0) as total FROM warehouse_stock_entries WHERE warehouse_id = ?");
@@ -516,31 +598,37 @@ public class WarehouseDetailContent {
             xs.setInt(1, warehouseId); ResultSet xrs = xs.executeQuery();
             double green=0, colored=0, white=0, waste=0;
             if (xrs.next()) { green=xrs.getDouble("g"); colored=xrs.getDouble("c"); white=xrs.getDouble("w"); waste=xrs.getDouble("ws"); }
-            double totalOut = green + colored + white + waste;
-            double remaining = totalIn - totalOut;
 
-            HBox statsRow = new HBox(12);
-            statsRow.getChildren().addAll(
-                    statBox("إجمالي الداخل", String.format("%.1f", totalIn / 1000), "طن"),
-                    statBox("إجمالي الخارج", String.format("%.1f", totalOut / 1000), "طن"),
-                    statBox("المتبقي", String.format("%.1f", remaining / 1000), "طن")
-            );
-            statsRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
-
-            HBox typesRow = new HBox(12);
-            typesRow.getChildren().addAll(
-                    typeBox("أخضر", green, "#2d7d2d"),
-                    typeBox("ألوان", colored, "#185FA5"),
-                    typeBox("أبيض", white, "#5f5e5a"),
-                    typeBox("زبالة", waste, "#854F0B")
-            );
-            typesRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
-
-            card.getChildren().addAll(statsRow, typesRow);
-
-        } catch (SQLException e) {
-            card.getChildren().add(new Label("خطأ في تحميل البيانات"));
+            return new StockData(totalIn, green, colored, white, waste);
         }
+    }
+
+    private static void renderStockCard(VBox card, StockData data) {
+        card.getChildren().clear();
+        Label title = new Label("إجمالي البضاعة في المخزن"); title.getStyleClass().add("card-title");
+        card.getChildren().add(title);
+
+        double totalOut = data.green() + data.colored() + data.white() + data.waste();
+        double remaining = data.totalIn() - totalOut;
+
+        HBox statsRow = new HBox(12);
+        statsRow.getChildren().addAll(
+                statBox("إجمالي الداخل", String.format("%.1f", data.totalIn() / 1000), "طن"),
+                statBox("إجمالي الخارج", String.format("%.1f", totalOut / 1000), "طن"),
+                statBox("المتبقي", String.format("%.1f", remaining / 1000), "طن")
+        );
+        statsRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
+
+        HBox typesRow = new HBox(12);
+        typesRow.getChildren().addAll(
+                typeBox("أخضر", data.green(), "#2d7d2d"),
+                typeBox("ألوان", data.colored(), "#185FA5"),
+                typeBox("أبيض", data.white(), "#5f5e5a"),
+                typeBox("زبالة", data.waste(), "#854F0B")
+        );
+        typesRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
+
+        card.getChildren().addAll(statsRow, typesRow);
     }
 
     private static VBox statBox(String title, String value, String unit) {

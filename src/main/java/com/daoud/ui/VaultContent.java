@@ -1,6 +1,8 @@
 package com.daoud.ui;
 
 import com.daoud.db.DatabaseManager_online;
+import com.daoud.model.Supplier;
+import com.daoud.model.Worker;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -17,11 +19,16 @@ public class VaultContent {
     record VaultRow(int id, String date, String direction, String paymentType,
                     double amount, String category, String notes) {}
 
+    record SummaryData(double cash, double bank, double wallet, double check) {}
+
+    record InitialData(List<Supplier> suppliers, List<Worker> workers,
+                       SummaryData summary, List<VaultRow> rows) {}
+
     public static Node build(int userId, String username, String role, int treasuryId, String treasuryName) {
 
         VBox summaryCard = new VBox(10);
         summaryCard.getStyleClass().add("card");
-        refreshSummary(summaryCard, treasuryId, treasuryName);
+        summaryCard.getChildren().add(new Label("جاري التحميل..."));
 
         ComboBox<String> directionCombo = new ComboBox<>(FXCollections.observableArrayList("دخول", "خروج"));
         directionCombo.setPromptText("دخول / خروج"); directionCombo.setMaxWidth(Double.MAX_VALUE);
@@ -34,42 +41,35 @@ public class VaultContent {
         ComboBox<String> targetTypeCombo = new ComboBox<>(FXCollections.observableArrayList("مصاريف", "مورد", "عامل"));
         targetTypeCombo.setPromptText("الصرف لمين؟"); targetTypeCombo.setMaxWidth(Double.MAX_VALUE);
 
-        ComboBox<com.daoud.model.Supplier> supplierCombo = new ComboBox<>(
-                FXCollections.observableArrayList(com.daoud.dao.SupplierDAO.getAllSuppliers()));
+        ComboBox<Supplier> supplierCombo = new ComboBox<>();
         supplierCombo.setPromptText("اختار المورد"); supplierCombo.setMaxWidth(Double.MAX_VALUE);
         supplierCombo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(com.daoud.model.Supplier item, boolean empty) {
+            @Override protected void updateItem(Supplier item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getName());
             }
         });
         supplierCombo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(com.daoud.model.Supplier item, boolean empty) {
+            @Override protected void updateItem(Supplier item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getName());
             }
         });
 
-        ComboBox<com.daoud.model.Worker> workerCombo = new ComboBox<>();
+        ComboBox<Worker> workerCombo = new ComboBox<>();
         workerCombo.setPromptText("اختار العامل"); workerCombo.setMaxWidth(Double.MAX_VALUE);
         workerCombo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(com.daoud.model.Worker item, boolean empty) {
+            @Override protected void updateItem(Worker item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getName());
             }
         });
         workerCombo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(com.daoud.model.Worker item, boolean empty) {
+            @Override protected void updateItem(Worker item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getName());
             }
         });
-        // كل العمال من كل المخازن
-        List<com.daoud.model.Worker> allWorkers = new ArrayList<>();
-        for (com.daoud.model.Warehouse w : com.daoud.dao.WarehouseDAO.getAllWarehouses())
-            allWorkers.addAll(com.daoud.dao.WorkerDAO.getWorkersByWarehouse(w.getId()));
-        allWorkers.addAll(com.daoud.dao.WorkerDAO.getWorkersByWarehouse(-1));
-        workerCombo.getItems().setAll(allWorkers);
 
         TextField expenseDetailsField = new TextField();
         expenseDetailsField.setPromptText("تفاصيل المصروف");
@@ -105,9 +105,41 @@ public class VaultContent {
 
         List<VaultRow> allRows = new ArrayList<>();
         VBox tableBody = new VBox(0);
+        tableBody.getChildren().add(new Label("جاري التحميل..."));
         HBox filtersBox = buildFilters(tableBody, allRows, treasuryId, summaryCard, treasuryName);
-        loadRows(allRows, treasuryId);
-        renderTable(tableBody, allRows, null, treasuryId, summaryCard, treasuryName);
+
+        VBox addCard = new VBox(10); addCard.getStyleClass().add("card");
+        Label addTitle = new Label("تسجيل معاملة"); addTitle.getStyleClass().add("card-title");
+        addCard.getChildren().addAll(addTitle,
+                new HBox(8, new VBox(4, new Label("الاتجاه:"), directionCombo), new VBox(4, new Label("نوع الدفع:"), paymentCombo)),
+                new VBox(4, new Label("المبلغ:"), amountField),
+                targetBox,
+                new VBox(4, new Label("ملاحظة:"), notesField), saveBtn, saveMsg);
+
+        HBox.setHgrow(directionCombo, Priority.ALWAYS); HBox.setHgrow(paymentCombo, Priority.ALWAYS);
+        VBox historyCard = new VBox(8); historyCard.getStyleClass().add("card");
+        Label histTitle = new Label("سجل المعاملات"); histTitle.getStyleClass().add("card-title");
+        historyCard.getChildren().addAll(histTitle, filtersBox, buildTableHeader(), tableBody);
+
+        // ── تحميل كل بيانات الشاشة مع بعض في الخلفية ──
+        AsyncHelper.run(
+                () -> new InitialData(
+                        com.daoud.dao.SupplierDAO.getAllSuppliers(),
+                        loadAllWorkers(),
+                        loadSummary(treasuryId),
+                        loadRowsFor(treasuryId)),
+                data -> {
+                    supplierCombo.setItems(FXCollections.observableArrayList(data.suppliers()));
+                    workerCombo.setItems(FXCollections.observableArrayList(data.workers()));
+                    renderSummary(summaryCard, data.summary(), treasuryName);
+                    allRows.clear(); allRows.addAll(data.rows());
+                    renderTable(tableBody, allRows, null, treasuryId, summaryCard, treasuryName);
+                },
+                error -> {
+                    summaryCard.getChildren().setAll(new Label("حصل خطأ في التحميل"));
+                    tableBody.getChildren().setAll(new Label("حصل خطأ في التحميل"));
+                }
+        );
 
         saveBtn.setOnAction(e -> {
             if (directionCombo.getValue() == null) { saveMsg.setText("اختار دخول/خروج"); return; }
@@ -133,61 +165,74 @@ public class VaultContent {
                 category = "دخول";
             }
 
+            double amount;
             try {
-                double amount = Double.parseDouble(amountField.getText().trim());
-                String direction = isOut ? "out" : "in";
-                String paymentType = switch (paymentCombo.getValue()) {
-                    case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
-                };
+                amount = Double.parseDouble(amountField.getText().trim());
+            } catch (NumberFormatException ex) { saveMsg.setText("ادخل رقم صحيح"); return; }
 
-                // التحقق من الرصيد عند الخروج
-                if (isOut) {
-                    double available = com.daoud.db.VaultHelper.getBalance(treasuryId, paymentType);
-                    if (amount > available) {
-                        saveMsg.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
-                        return;
-                    }
-                }
+            final String finalCategory = category;
+            final boolean finalIsOut = isOut;
+            final String direction = isOut ? "out" : "in";
+            final String paymentType = switch (paymentCombo.getValue()) {
+                case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
+            };
+            final String notes = notesField.getText().trim();
 
-                String sql = "INSERT INTO vault_transactions (vault_id, transaction_date, direction, payment_type, amount, category, notes, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, treasuryId); stmt.setString(2, direction); stmt.setString(3, paymentType);
-                    stmt.setDouble(4, amount); stmt.setString(5, category);
-                    stmt.setString(6, notesField.getText().trim()); stmt.setInt(7, userId);
-                    stmt.executeUpdate();
-                }
+            saveMsg.setText("جاري الحفظ...");
+            AsyncHelper.run(
+                    () -> {
+                        if (finalIsOut) {
+                            double available = com.daoud.db.VaultHelper.getBalance(treasuryId, paymentType);
+                            if (amount > available) return "INSUFFICIENT:" + available;
+                        }
+                        String sql = "INSERT INTO vault_transactions (vault_id, transaction_date, direction, payment_type, amount, category, notes, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?)";
+                        try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setInt(1, treasuryId); stmt.setString(2, direction); stmt.setString(3, paymentType);
+                            stmt.setDouble(4, amount); stmt.setString(5, finalCategory);
+                            stmt.setString(6, notes); stmt.setInt(7, userId);
+                            stmt.executeUpdate();
+                        }
+                        return "OK";
+                    },
+                    result -> {
+                        if (result.startsWith("INSUFFICIENT:")) {
+                            double available = Double.parseDouble(result.substring("INSUFFICIENT:".length()));
+                            saveMsg.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
+                            return;
+                        }
+                        amountField.clear(); notesField.clear(); expenseDetailsField.clear();
+                        directionCombo.setValue(null); paymentCombo.setValue(null);
+                        targetTypeCombo.setValue(null);
+                        supplierCombo.setValue(null); workerCombo.setValue(null);
+                        targetBox.setVisible(false); targetBox.setManaged(false);
+                        supplierRow.setVisible(false); supplierRow.setManaged(false);
+                        workerRow.setVisible(false); workerRow.setManaged(false);
+                        expenseRow.setVisible(false); expenseRow.setManaged(false);
 
-                amountField.clear(); notesField.clear(); expenseDetailsField.clear();
-                directionCombo.setValue(null); paymentCombo.setValue(null);
-                targetTypeCombo.setValue(null);
-                supplierCombo.setValue(null); workerCombo.setValue(null);
-                targetBox.setVisible(false); targetBox.setManaged(false);
-                supplierRow.setVisible(false); supplierRow.setManaged(false);
-                workerRow.setVisible(false); workerRow.setManaged(false);
-                expenseRow.setVisible(false); expenseRow.setManaged(false);
-
-                saveMsg.setText("تم ✓");
-                refreshSummary(summaryCard, treasuryId, treasuryName);
-                allRows.clear(); loadRows(allRows, treasuryId);
-                renderTable(tableBody, allRows, null, treasuryId, summaryCard, treasuryName);
-            } catch (NumberFormatException ex) { saveMsg.setText("ادخل رقم صحيح");
-            } catch (SQLException ex) { saveMsg.setText("خطأ: " + ex.getMessage()); }
+                        saveMsg.setText("تم ✓");
+                        reload(summaryCard, tableBody, allRows, treasuryId, null, treasuryName);
+                    },
+                    error -> saveMsg.setText("خطأ أثناء الحفظ"),
+                    saveBtn
+            );
         });
 
-        VBox addCard = new VBox(10); addCard.getStyleClass().add("card");
-        Label addTitle = new Label("تسجيل معاملة"); addTitle.getStyleClass().add("card-title");
-        addCard.getChildren().addAll(addTitle,
-                new HBox(8, new VBox(4, new Label("الاتجاه:"), directionCombo), new VBox(4, new Label("نوع الدفع:"), paymentCombo)),
-                new VBox(4, new Label("المبلغ:"), amountField),
-                targetBox,
-                new VBox(4, new Label("ملاحظة:"), notesField), saveBtn, saveMsg);
-
-        HBox.setHgrow(directionCombo, Priority.ALWAYS); HBox.setHgrow(paymentCombo, Priority.ALWAYS);
-        VBox historyCard = new VBox(8); historyCard.getStyleClass().add("card");
-        Label histTitle = new Label("سجل المعاملات"); histTitle.getStyleClass().add("card-title");
-        historyCard.getChildren().addAll(histTitle, filtersBox, buildTableHeader(), tableBody);
-
         return new VBox(12, summaryCard, addCard, historyCard);
+    }
+
+    private static List<Worker> loadAllWorkers() {
+        // استعلام واحد لكل العمال (بدل استعلام لكل مخزن + استعلام تاني للعمال الحرة)
+        List<Worker> list = new ArrayList<>();
+        String sql = "SELECT * FROM workers ORDER BY name";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(new Worker(
+                        rs.getInt("id"), rs.getString("name"), rs.getString("phone"),
+                        rs.getInt("warehouse_id"), rs.getDouble("daily_wage")));
+            }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        return list;
     }
 
     private static HBox buildFilters(VBox tableBody, List<VaultRow> allRows, int treasuryId, VBox summaryCard, String name) {
@@ -221,7 +266,8 @@ public class VaultContent {
         return header;
     }
 
-    private static void loadRows(List<VaultRow> rows, int treasuryId) {
+    private static List<VaultRow> loadRowsFor(int treasuryId) {
+        List<VaultRow> rows = new ArrayList<>();
         String sql = "SELECT id, transaction_date, direction, payment_type, amount, COALESCE(category,'') as category, COALESCE(notes,'') as notes FROM vault_transactions WHERE vault_id = ? ORDER BY transaction_date DESC LIMIT 50";
         try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, treasuryId);
@@ -232,6 +278,74 @@ public class VaultContent {
                         rs.getDouble("amount"), rs.getString("category"), rs.getString("notes")));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
+        return rows;
+    }
+
+    private static SummaryData loadSummary(int treasuryId) throws SQLException {
+        // استعلام واحد بيحسب رصيد كل أنواع الدفع مع بعض (بدل 4 استعلامات منفصلة)
+        String sql = """
+            SELECT payment_type,
+                   COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE -amount END), 0) AS bal
+            FROM vault_transactions
+            WHERE vault_id = ?
+            GROUP BY payment_type
+        """;
+        double cash = 0, bank = 0, wallet = 0, check = 0;
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, treasuryId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                double bal = rs.getDouble("bal");
+                switch (rs.getString("payment_type")) {
+                    case "bank" -> bank = bal;
+                    case "wallet" -> wallet = bal;
+                    case "check" -> check = bal;
+                    default -> cash = bal;
+                }
+            }
+        }
+        return new SummaryData(cash, bank, wallet, check);
+    }
+
+    private static void reload(VBox summaryCard, VBox tableBody, List<VaultRow> allRows,
+                               int treasuryId, String filter, String treasuryName) {
+        AsyncHelper.run(
+                () -> new Object[]{loadSummary(treasuryId), loadRowsFor(treasuryId)},
+                result -> {
+                    renderSummary(summaryCard, (SummaryData) result[0], treasuryName);
+                    @SuppressWarnings("unchecked")
+                    List<VaultRow> rows = (List<VaultRow>) result[1];
+                    allRows.clear(); allRows.addAll(rows);
+                    renderTable(tableBody, allRows, filter, treasuryId, summaryCard, treasuryName);
+                },
+                error -> { }
+        );
+    }
+
+    private static void renderSummary(VBox card, SummaryData data, String name) {
+        card.getChildren().clear();
+        Label title = new Label("خزنة: " + name); title.getStyleClass().add("card-title");
+        card.getChildren().add(title);
+
+        String[] typeNames = {"كاش", "بنك", "محفظة", "شيك"};
+        double[] balances = {data.cash(), data.bank(), data.wallet(), data.check()};
+        String[] colors = {"#3B6D11", "#185FA5", "#854F0B", "#5f5e5a"};
+        double grandTotal = data.cash() + data.bank() + data.wallet() + data.check();
+
+        HBox typesRow = new HBox(12);
+        for (int i = 0; i < typeNames.length; i++) {
+            Label nameLbl = new Label(typeNames[i]); nameLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #888780;");
+            Label valLbl = new Label(String.format("%.0f جنيه", balances[i]));
+            valLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + (balances[i] >= 0 ? colors[i] : "#A32D2D") + ";");
+            VBox box = new VBox(2, nameLbl, valLbl);
+            box.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 10; -fx-background-radius: 8;");
+            box.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(box, Priority.ALWAYS);
+            typesRow.getChildren().add(box);
+        }
+        Label totalLbl = new Label(String.format("الإجمالي: %.0f جنيه", grandTotal));
+        totalLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + (grandTotal >= 0 ? "#3B6D11" : "#A32D2D") + ";");
+        card.getChildren().addAll(totalLbl, typesRow);
     }
 
     private static void renderTable(VBox table, List<VaultRow> rows, String filter,
@@ -301,24 +415,34 @@ public class VaultContent {
                 Label errLbl = new Label("");
 
                 saveEdit.setOnAction(ev -> {
+                    double amt;
+                    String dir, pay;
                     try {
-                        double amt = Double.parseDouble(amtEdit.getText().trim());
-                        String dir = dirEdit.getValue().equals("دخول") ? "in" : "out";
-                        String pay = switch (payEdit.getValue()) {
+                        amt = Double.parseDouble(amtEdit.getText().trim());
+                        dir = dirEdit.getValue().equals("دخول") ? "in" : "out";
+                        pay = switch (payEdit.getValue()) {
                             case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
                         };
-                        try (Connection conn = DatabaseManager_online.getConnection();
-                             PreparedStatement stmt = conn.prepareStatement(
-                                     "UPDATE vault_transactions SET direction=?, payment_type=?, amount=?, category=?, notes=? WHERE id=?")) {
-                            stmt.setString(1, dir); stmt.setString(2, pay); stmt.setDouble(3, amt);
-                            stmt.setString(4, catEdit.getText().trim()); stmt.setString(5, notEdit.getText().trim());
-                            stmt.setInt(6, finalRow.id()); stmt.executeUpdate();
-                        }
-                        rows.clear(); loadRows(rows, treasuryId);
-                        renderTable(table, rows, filter, treasuryId, summaryCard, treasuryName);
-                        refreshSummary(summaryCard, treasuryId, treasuryName);
-                        ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
-                    } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                    } catch (NumberFormatException ex) { errLbl.setText("خطأ"); return; }
+
+                    final double finalAmt = amt; final String finalDir = dir; final String finalPay = pay;
+                    AsyncHelper.runVoid(
+                            () -> {
+                                try (Connection conn = DatabaseManager_online.getConnection();
+                                     PreparedStatement stmt = conn.prepareStatement(
+                                             "UPDATE vault_transactions SET direction=?, payment_type=?, amount=?, category=?, notes=? WHERE id=?")) {
+                                    stmt.setString(1, finalDir); stmt.setString(2, finalPay); stmt.setDouble(3, finalAmt);
+                                    stmt.setString(4, catEdit.getText().trim()); stmt.setString(5, notEdit.getText().trim());
+                                    stmt.setInt(6, finalRow.id()); stmt.executeUpdate();
+                                }
+                            },
+                            () -> {
+                                reload(summaryCard, table, rows, treasuryId, filter, treasuryName);
+                                ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                            },
+                            error -> errLbl.setText("خطأ"),
+                            saveEdit
+                    );
                 });
 
                 VBox dl = new VBox(10,
@@ -335,13 +459,17 @@ public class VaultContent {
                 Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "هتحذف المعاملة دي؟");
                 confirm.showAndWait().ifPresent(res -> {
                     if (res == ButtonType.OK) {
-                        try (Connection conn = DatabaseManager_online.getConnection();
-                             PreparedStatement stmt = conn.prepareStatement("DELETE FROM vault_transactions WHERE id=?")) {
-                            stmt.setInt(1, finalRow.id()); stmt.executeUpdate();
-                            rows.remove(finalRow);
-                            renderTable(table, rows, filter, treasuryId, summaryCard, treasuryName);
-                            refreshSummary(summaryCard, treasuryId, treasuryName);
-                        } catch (SQLException ex) { System.err.println(ex.getMessage()); }
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.runVoid(
+                                () -> {
+                                    try (Connection conn = DatabaseManager_online.getConnection();
+                                         PreparedStatement stmt = conn.prepareStatement("DELETE FROM vault_transactions WHERE id=?")) {
+                                        stmt.setInt(1, finalRow.id()); stmt.executeUpdate();
+                                    }
+                                },
+                                () -> reload(summaryCard, table, rows, treasuryId, filter, treasuryName),
+                                error -> reload(summaryCard, table, rows, treasuryId, filter, treasuryName)
+                        );
                     }
                 });
             });
@@ -355,37 +483,6 @@ public class VaultContent {
             empty.setStyle("-fx-text-fill: #888780; -fx-padding: 16; -fx-font-size: 13px;");
             table.getChildren().add(empty);
         }
-    }
-
-    private static void refreshSummary(VBox card, int treasuryId, String name) {
-        card.getChildren().clear();
-        Label title = new Label("خزنة: " + name); title.getStyleClass().add("card-title");
-        card.getChildren().add(title);
-        try (Connection conn = DatabaseManager_online.getConnection()) {
-            String[] types = {"cash", "bank", "wallet", "check"};
-            String[] typeNames = {"كاش", "بنك", "محفظة", "شيك"};
-            String[] colors = {"#3B6D11", "#185FA5", "#854F0B", "#5f5e5a"};
-            double grandTotal = 0;
-            HBox typesRow = new HBox(12);
-            for (int i = 0; i < types.length; i++) {
-                PreparedStatement ps = conn.prepareStatement(
-                        "SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE -amount END), 0) FROM vault_transactions WHERE vault_id = ? AND payment_type = ?");
-                ps.setInt(1, treasuryId); ps.setString(2, types[i]);
-                ResultSet rs = ps.executeQuery();
-                double bal = rs.next() ? rs.getDouble(1) : 0;
-                grandTotal += bal;
-                Label nameLbl = new Label(typeNames[i]); nameLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #888780;");
-                Label valLbl = new Label(String.format("%.0f جنيه", bal));
-                valLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + (bal >= 0 ? colors[i] : "#A32D2D") + ";");
-                VBox box = new VBox(2, nameLbl, valLbl);
-                box.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 10; -fx-background-radius: 8;");
-                box.setMaxWidth(Double.MAX_VALUE); HBox.setHgrow(box, Priority.ALWAYS);
-                typesRow.getChildren().add(box);
-            }
-            Label totalLbl = new Label(String.format("الإجمالي: %.0f جنيه", grandTotal));
-            totalLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + (grandTotal >= 0 ? "#3B6D11" : "#A32D2D") + ";");
-            card.getChildren().addAll(totalLbl, typesRow);
-        } catch (SQLException e) { card.getChildren().add(new Label("خطأ")); }
     }
 
     private static Button filterBtn(String text) {

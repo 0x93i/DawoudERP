@@ -20,39 +20,57 @@ public class VaultsContent {
     public static Node build(int userId, String username, String role) {
 
         VBox content = new VBox(12);
+        Label loadingLbl = new Label("جاري تحميل الخزن...");
+        loadingLbl.setStyle("-fx-text-fill: #888780; -fx-padding: 20; -fx-font-size: 13px;");
+        content.getChildren().add(loadingLbl);
 
+        AsyncHelper.run(
+                () -> loadVaults(userId, role),
+                vaults -> content.getChildren().setAll(buildContent(vaults, userId, username, role)),
+                error -> content.getChildren().setAll(new Label("حصل خطأ في تحميل الخزن"))
+        );
+
+        return content;
+    }
+
+    private static List<VaultInfo> loadVaults(int userId, String role) throws SQLException {
         List<VaultInfo> vaults = new ArrayList<>();
 
-        try (Connection conn = DatabaseManager_online.getConnection()) {
-            String sql;
-            if (role.equals("admin")) {
-                sql = "SELECT id, name, owner_type FROM vaults ORDER BY owner_type DESC, name";
-            } else {
-                sql = "SELECT t.id, t.name, t.owner_type FROM vaults t " +
-                        "JOIN warehouses w ON t.owner_id = w.id AND t.owner_type = 'warehouse' " +
-                        "WHERE w.manager_user_id = ?";
-            }
+        // استعلام واحد بيحسب رصيد كل خزنة مع بعض (بدل استعلام منفصل لكل خزنة لوحدها)
+        String sql;
+        if (role.equals("admin")) {
+            sql = """
+                SELECT v.id, v.name, v.owner_type,
+                       COALESCE((SELECT SUM(CASE WHEN vt.direction='in' THEN vt.amount ELSE -vt.amount END)
+                                 FROM vault_transactions vt WHERE vt.vault_id = v.id), 0) AS total
+                FROM vaults v
+                ORDER BY v.owner_type DESC, v.name
+            """;
+        } else {
+            sql = """
+                SELECT v.id, v.name, v.owner_type,
+                       COALESCE((SELECT SUM(CASE WHEN vt.direction='in' THEN vt.amount ELSE -vt.amount END)
+                                 FROM vault_transactions vt WHERE vt.vault_id = v.id), 0) AS total
+                FROM vaults v
+                JOIN warehouses w ON v.owner_id = w.id AND v.owner_type = 'warehouse'
+                WHERE w.manager_user_id = ?
+            """;
+        }
 
-            PreparedStatement stmt = conn.prepareStatement(sql);
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             if (!role.equals("admin")) stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
-
             while (rs.next()) {
-                int tid = rs.getInt("id");
-                double total = 0;
-                PreparedStatement ps = conn.prepareStatement(
-                        "SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE -amount END), 0) " +
-                                "FROM vault_transactions WHERE vault_id = ?");
-                ps.setInt(1, tid);
-                ResultSet tr = ps.executeQuery();
-                if (tr.next()) total = tr.getDouble(1);
-                vaults.add(new VaultInfo(tid, rs.getString("name"), rs.getString("owner_type"), total));
+                vaults.add(new VaultInfo(rs.getInt("id"), rs.getString("name"),
+                        rs.getString("owner_type"), rs.getDouble("total")));
             }
-
-        } catch (SQLException e) {
-            content.getChildren().add(new Label("خطأ: " + e.getMessage()));
-            return content;
         }
+        return vaults;
+    }
+
+    private static Node buildContent(List<VaultInfo> vaults, int userId, String username, String role) {
+        VBox content = new VBox(12);
 
         // ── Cards الخزن ──
         HBox cardsRow = new HBox(12);
@@ -123,20 +141,21 @@ public class VaultsContent {
                     int toId = Integer.parseInt(toCombo.getValue().split("\\|")[0]);
                     String payType = VaultHelper.toPaymentType(payTypeCombo.getValue());
                     String notes = notesField.getText().trim();
+                    String fromName = fromCombo.getValue().split("\\|")[1];
+                    String toName = toCombo.getValue().split("\\|")[1];
 
-                    // خروج من الخزنة الأولى
-                    VaultHelper.record(fromId, "out", payType, amount,
-                            "تحويل إلى: " + toCombo.getValue().split("\\|")[1], notes, userId);
-
-                    // دخول للخزنة التانية
-                    VaultHelper.record(toId, "in", payType, amount,
-                            "تحويل من: " + fromCombo.getValue().split("\\|")[1], notes, userId);
-
-                    amountField.clear(); notesField.clear();
-                    transferMsg.setText("تم التحويل ✓");
-
-                    // تحديث الأرصدة
-                    MainLayout.loadContent(build(userId, username, role));
+                    transferMsg.setText("جاري التحويل...");
+                    AsyncHelper.runVoid(
+                            () -> {
+                                // خروج من الخزنة الأولى
+                                VaultHelper.record(fromId, "out", payType, amount, "تحويل إلى: " + toName, notes, userId);
+                                // دخول للخزنة التانية
+                                VaultHelper.record(toId, "in", payType, amount, "تحويل من: " + fromName, notes, userId);
+                            },
+                            () -> MainLayout.loadContent(build(userId, username, role)),
+                            error -> transferMsg.setText("حصل خطأ أثناء التحويل"),
+                            transferBtn
+                    );
 
                 } catch (NumberFormatException ex) { transferMsg.setText("ادخل رقم صحيح"); }
             });

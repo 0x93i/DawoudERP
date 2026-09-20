@@ -24,16 +24,14 @@ public class SupplierDetailContent {
 
         List<HistoryRow> allRows = new ArrayList<>();
         VBox tableBody = new VBox(0);
+        tableBody.getChildren().add(new Label("جاري التحميل..."));
 
-        Label balanceLabel = new Label();
-        refreshBalance(balanceLabel, supplier.getId());
-
+        Label balanceLabel = new Label("جاري التحميل...");
         Label floorLabel = new Label("الأرضية: " + supplier.getFloorAmount() + " جنيه");
         Label phoneLabel = new Label("التليفون: " + (supplier.getPhone() != null && !supplier.getPhone().isEmpty() ? supplier.getPhone() : "—"));
 
-        loadRows(allRows, supplier.getId());
         HBox filtersBox = buildFilters(tableBody, allRows, supplier.getId(), balanceLabel);
-        renderTable(tableBody, allRows, null, supplier.getId(), balanceLabel);
+        reload(balanceLabel, tableBody, allRows, supplier.getId(), null);
 
         // ── تسجيل بضاعة ──
         TextField grossWeightField = new TextField(); grossWeightField.setPromptText("الوزن الإجمالي (كيلو)");
@@ -79,22 +77,28 @@ public class SupplierDetailContent {
                 double price = Double.parseDouble(priceField.getText().trim());
                 double deduction = gross * (pct / 100.0);
 
-                String sql = "INSERT INTO supplier_transactions (supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, supplier.getId()); stmt.setDouble(2, gross);
-                    stmt.setDouble(3, deduction); stmt.setDouble(4, price); stmt.setInt(5, userId);
-                    stmt.executeUpdate();
-                }
-                grossWeightField.clear(); deductionField.clear(); priceField.clear();
-                pctLabel.setText("نسبة الخصم: —");
-                netWeightLabel.setText("الوزن الصافي: —");
-                totalLabel.setText("الإجمالي: —");
-                dailyError.setText("تم الحفظ ✓");
-                refreshBalance(balanceLabel, supplier.getId());
-                allRows.clear(); loadRows(allRows, supplier.getId());
-                renderTable(tableBody, allRows, null, supplier.getId(), balanceLabel);
-            } catch (NumberFormatException ex) { dailyError.setText("تأكد من الأرقام");
-            } catch (SQLException ex) { dailyError.setText("خطأ: " + ex.getMessage()); }
+                dailyError.setText("جاري الحفظ...");
+                AsyncHelper.runVoid(
+                        () -> {
+                            String sql = "INSERT INTO supplier_transactions (supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+                                stmt.setInt(1, supplier.getId()); stmt.setDouble(2, gross);
+                                stmt.setDouble(3, deduction); stmt.setDouble(4, price); stmt.setInt(5, userId);
+                                stmt.executeUpdate();
+                            }
+                        },
+                        () -> {
+                            grossWeightField.clear(); deductionField.clear(); priceField.clear();
+                            pctLabel.setText("نسبة الخصم: —");
+                            netWeightLabel.setText("الوزن الصافي: —");
+                            totalLabel.setText("الإجمالي: —");
+                            dailyError.setText("تم الحفظ ✓");
+                            reload(balanceLabel, tableBody, allRows, supplier.getId(), null);
+                        },
+                        error -> dailyError.setText("خطأ أثناء الحفظ"),
+                        saveDailyBtn
+                );
+            } catch (NumberFormatException ex) { dailyError.setText("تأكد من الأرقام"); }
         });
 
         // ── سحب فلوس ──
@@ -110,88 +114,113 @@ public class SupplierDetailContent {
             try {
                 double amount = Double.parseDouble(withdrawField.getText().trim());
                 String method = paymentMethodCombo.getValue();
+                String notes = withdrawNotes.getText().trim();
 
-                // تحديد الخزنة
-                int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
-                int treasuryId = (warehouseId == -1)
-                        ? VaultHelper.getAdminTreasuryId()
-                        : VaultHelper.getWarehouseTreasuryId(warehouseId);
-                String payType = VaultHelper.toPaymentType(method);
+                withdrawError.setText("جاري التحقق...");
+                AsyncHelper.run(
+                        () -> {
+                            // تحديد الخزنة
+                            int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
+                            int treasuryId = (warehouseId == -1)
+                                    ? VaultHelper.getAdminTreasuryId()
+                                    : VaultHelper.getWarehouseTreasuryId(warehouseId);
+                            String payType = VaultHelper.toPaymentType(method);
+                            double available = VaultHelper.getBalance(treasuryId, payType);
 
-                // التحقق من الرصيد
-                double available = VaultHelper.getBalance(treasuryId, payType);
-                if (amount > available) {
-                    withdrawError.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
-                    return;
-                }
+                            if (amount > available) {
+                                return "INSUFFICIENT:" + available;
+                            }
 
-                String sql = "INSERT INTO supplier_withdrawals (supplier_id, amount, withdrawal_date, payment_method, recorded_by, notes) VALUES (?, ?, CURRENT_DATE, ?, ?, ?)";
-                try (Connection conn = DatabaseManager_online.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setInt(1, supplier.getId());
-                    stmt.setDouble(2, amount);
-                    stmt.setString(3, method);
-                    stmt.setInt(4, userId);
-                    stmt.setString(5, withdrawNotes.getText().trim());
-                    stmt.executeUpdate();
+                            String sql = "INSERT INTO supplier_withdrawals (supplier_id, amount, withdrawal_date, payment_method, recorded_by, notes) VALUES (?, ?, CURRENT_DATE, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                                stmt.setInt(1, supplier.getId());
+                                stmt.setDouble(2, amount);
+                                stmt.setString(3, method);
+                                stmt.setInt(4, userId);
+                                stmt.setString(5, notes);
+                                stmt.executeUpdate();
 
-                    VaultHelper.record(treasuryId, "out", payType,
-                            amount, "سحب مورد: " + supplier.getName(),
-                            withdrawNotes.getText().trim(), userId);
-                }
-
-                withdrawField.clear(); withdrawNotes.clear();
-                withdrawError.setText("تم ✓");
-                refreshBalance(balanceLabel, supplier.getId());
-                allRows.clear(); loadRows(allRows, supplier.getId());
-                renderTable(tableBody, allRows, null, supplier.getId(), balanceLabel);
-            } catch (NumberFormatException ex) { withdrawError.setText("ادخل رقم");
-            } catch (SQLException ex) { withdrawError.setText("خطأ: " + ex.getMessage()); }
+                                VaultHelper.record(treasuryId, "out", payType,
+                                        amount, "سحب مورد: " + supplier.getName(),
+                                        notes, userId);
+                            }
+                            return "OK";
+                        },
+                        result -> {
+                            if (result.startsWith("INSUFFICIENT:")) {
+                                double available = Double.parseDouble(result.substring("INSUFFICIENT:".length()));
+                                withdrawError.setText(String.format("الرصيد غير كافي — المتاح: %.0f جنيه", available));
+                                return;
+                            }
+                            withdrawField.clear(); withdrawNotes.clear();
+                            withdrawError.setText("تم ✓");
+                            reload(balanceLabel, tableBody, allRows, supplier.getId(), null);
+                        },
+                        error -> withdrawError.setText("خطأ أثناء الحفظ"),
+                        saveWithdrawBtn
+                );
+            } catch (NumberFormatException ex) { withdrawError.setText("ادخل رقم"); }
         });
 
         // ── تسوية ──
         Button settleBtn = new Button("تسوية أسبوعية"); settleBtn.getStyleClass().add("btn-default");
         settleBtn.setVisible(role.equals("admin")); settleBtn.setManaged(role.equals("admin"));
         settleBtn.setOnAction(e -> {
-            double balance = SupplierDAO.getSupplierBalance(supplier.getId());
-            TextField paidField = new TextField(); paidField.setPromptText("المبلغ المدفوع");
-            TextField newFloorField = new TextField("0"); newFloorField.setPromptText("أرضية جديدة");
-            ComboBox<String> methodCombo = new ComboBox<>(
-                    FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي"));
-            methodCombo.setValue("كاش");
-            Button confirmBtn = new Button("تأكيد"); confirmBtn.getStyleClass().add("btn-primary");
-            Label errLbl = new Label("");
-            Label balLbl = new Label(String.format("الرصيد الحالي: %.2f جنيه", balance));
+            settleBtn.setDisable(true);
+            AsyncHelper.run(
+                    () -> SupplierDAO.getSupplierBalance(supplier.getId()),
+                    balance -> {
+                        settleBtn.setDisable(false);
+                        TextField paidField = new TextField(); paidField.setPromptText("المبلغ المدفوع");
+                        TextField newFloorField = new TextField("0"); newFloorField.setPromptText("أرضية جديدة");
+                        ComboBox<String> methodCombo = new ComboBox<>(
+                                FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي"));
+                        methodCombo.setValue("كاش");
+                        Button confirmBtn = new Button("تأكيد"); confirmBtn.getStyleClass().add("btn-primary");
+                        Label errLbl = new Label("");
+                        Label balLbl = new Label(String.format("الرصيد الحالي: %.2f جنيه", balance));
 
-            confirmBtn.setOnAction(ev -> {
-                try {
-                    double paid = Double.parseDouble(paidField.getText().trim());
-                    double newFloor = Double.parseDouble(newFloorField.getText().trim());
-                    SupplierDAO.settleSupplier(supplier.getId(), paid, newFloor, userId);
-                    if (paid > 0) {
-                        int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
-                        int vaultId = (warehouseId == -1)
-                                ? com.daoud.db.VaultHelper.getAdminTreasuryId()
-                                : com.daoud.db.VaultHelper.getWarehouseTreasuryId(warehouseId);
+                        confirmBtn.setOnAction(ev -> {
+                            try {
+                                double paid = Double.parseDouble(paidField.getText().trim());
+                                double newFloor = Double.parseDouble(newFloorField.getText().trim());
+                                String method = methodCombo.getValue();
 
-                        com.daoud.db.VaultHelper.record(vaultId, "out",
-                                com.daoud.db.VaultHelper.toPaymentType(methodCombo.getValue()),
-                                paid, "تسوية مورد: " + supplier.getName(), "", userId);
-                    }
-                    refreshBalance(balanceLabel, supplier.getId());
-                    floorLabel.setText("الأرضية: " + newFloor + " جنيه");
-                    allRows.clear(); loadRows(allRows, supplier.getId());
-                    renderTable(tableBody, allRows, null, supplier.getId(), balanceLabel);
-                } catch (NumberFormatException ex) { errLbl.setText("أرقام صحيحة"); }
-            });
+                                AsyncHelper.runVoid(
+                                        () -> {
+                                            SupplierDAO.settleSupplier(supplier.getId(), paid, newFloor, userId);
+                                            if (paid > 0) {
+                                                int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
+                                                int vaultId = (warehouseId == -1)
+                                                        ? VaultHelper.getAdminTreasuryId()
+                                                        : VaultHelper.getWarehouseTreasuryId(warehouseId);
+                                                VaultHelper.record(vaultId, "out",
+                                                        VaultHelper.toPaymentType(method),
+                                                        paid, "تسوية مورد: " + supplier.getName(), "", userId);
+                                            }
+                                        },
+                                        () -> {
+                                            floorLabel.setText("الأرضية: " + newFloor + " جنيه");
+                                            reload(balanceLabel, tableBody, allRows, supplier.getId(), null);
+                                            ((javafx.stage.Stage) confirmBtn.getScene().getWindow()).close();
+                                        },
+                                        error -> errLbl.setText("حصل خطأ"),
+                                        confirmBtn
+                                );
+                            } catch (NumberFormatException ex) { errLbl.setText("أرقام صحيحة"); }
+                        });
 
-            VBox dl = new VBox(10, balLbl,
-                    new Label("المبلغ المدفوع:"), paidField,
-                    new Label("طريقة الدفع:"), methodCombo,
-                    new Label("أرضية جديدة:"), newFloorField,
-                    confirmBtn, errLbl);
-            dl.setPadding(new Insets(20));
-            DialogHelper.create("تسوية أسبوعية", dl, 340, 320).show();
+                        VBox dl = new VBox(10, balLbl,
+                                new Label("المبلغ المدفوع:"), paidField,
+                                new Label("طريقة الدفع:"), methodCombo,
+                                new Label("أرضية جديدة:"), newFloorField,
+                                confirmBtn, errLbl);
+                        dl.setPadding(new Insets(20));
+                        DialogHelper.create("تسوية أسبوعية", dl, 340, 320).show();
+                    },
+                    error -> settleBtn.setDisable(false)
+            );
         });
 
         Button backBtn = new Button("← رجوع للموردين"); backBtn.getStyleClass().add("btn-default");
@@ -274,7 +303,31 @@ public class SupplierDetailContent {
         return header;
     }
 
-    private static void loadRows(List<HistoryRow> rows, int supplierId) {
+    // ── تحميل الرصيد + سجل المعاملات مع بعض في الخلفية ──
+    private static void reload(Label balanceLabel, VBox tableBody, List<HistoryRow> allRows, int supplierId, String filterType) {
+        AsyncHelper.run(
+                () -> new Object[]{ SupplierDAO.getSupplierBalance(supplierId), loadRows(supplierId) },
+                result -> {
+                    double balance = (double) result[0];
+                    @SuppressWarnings("unchecked")
+                    List<HistoryRow> rows = (List<HistoryRow>) result[1];
+                    setBalanceText(balanceLabel, balance);
+                    allRows.clear();
+                    allRows.addAll(rows);
+                    renderTable(tableBody, allRows, filterType, supplierId, balanceLabel);
+                },
+                error -> balanceLabel.setText("حصل خطأ في تحميل البيانات")
+        );
+    }
+
+    private static void setBalanceText(Label lbl, double balance) {
+        lbl.setText(String.format("الرصيد: %.2f جنيه", balance));
+        lbl.getStyleClass().removeAll("label-balance-positive", "label-balance-negative");
+        lbl.getStyleClass().add(balance >= 0 ? "label-balance-positive" : "label-balance-negative");
+    }
+
+    private static List<HistoryRow> loadRows(int supplierId) {
+        List<HistoryRow> rows = new ArrayList<>();
         String sql1 = "SELECT id, transaction_date, gross_weight, deduction_kg, price_per_kg " +
                 "FROM supplier_transactions WHERE supplier_id = ? ORDER BY transaction_date DESC LIMIT 30";
         try (Connection conn = DatabaseManager_online.getConnection();
@@ -308,6 +361,7 @@ public class SupplierDetailContent {
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
         rows.sort((a, b) -> b.date().compareTo(a.date()));
+        return rows;
     }
 
     private static void renderTable(VBox table, List<HistoryRow> rows, String filterType,
@@ -372,42 +426,59 @@ public class SupplierDetailContent {
             // ── التعديل ──
             editBtn.setOnAction(e -> {
                 if (finalRow.type().equals("بضاعة")) {
-                    // تعديل بضاعة
                     TextField gField = new TextField(); gField.setPromptText("الوزن الإجمالي");
                     TextField dField = new TextField(); dField.setPromptText("خصم الوزن");
                     TextField pField = new TextField(); pField.setPromptText("سعر الكيلو");
-
-                    // جيب القيم الحالية
-                    try (Connection conn = DatabaseManager_online.getConnection();
-                         PreparedStatement stmt = conn.prepareStatement(
-                                 "SELECT gross_weight, deduction_kg, price_per_kg FROM supplier_transactions WHERE id = ?")) {
-                        stmt.setInt(1, finalRow.recordId());
-                        ResultSet rs = stmt.executeQuery();
-                        if (rs.next()) {
-                            gField.setText(String.valueOf(rs.getDouble("gross_weight")));
-                            dField.setText(String.valueOf(rs.getDouble("deduction_kg")));
-                            pField.setText(String.valueOf(rs.getDouble("price_per_kg")));
-                        }
-                    } catch (SQLException ex) { System.err.println(ex.getMessage()); }
-
                     Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
                     Label errLbl = new Label("");
+                    saveEdit.setDisable(true);
+
+                    AsyncHelper.run(
+                            () -> {
+                                try (Connection conn = DatabaseManager_online.getConnection();
+                                     PreparedStatement stmt = conn.prepareStatement(
+                                             "SELECT gross_weight, deduction_kg, price_per_kg FROM supplier_transactions WHERE id = ?")) {
+                                    stmt.setInt(1, finalRow.recordId());
+                                    ResultSet rs = stmt.executeQuery();
+                                    if (rs.next()) {
+                                        return new double[]{rs.getDouble("gross_weight"), rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg")};
+                                    }
+                                }
+                                return null;
+                            },
+                            vals -> {
+                                if (vals != null) {
+                                    gField.setText(String.valueOf(vals[0]));
+                                    dField.setText(String.valueOf(vals[1]));
+                                    pField.setText(String.valueOf(vals[2]));
+                                }
+                                saveEdit.setDisable(false);
+                            }
+                    );
 
                     saveEdit.setOnAction(ev -> {
                         try {
                             double g = Double.parseDouble(gField.getText().trim());
                             double d = Double.parseDouble(dField.getText().trim());
                             double p = Double.parseDouble(pField.getText().trim());
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(
-                                         "UPDATE supplier_transactions SET gross_weight=?, deduction_kg=?, price_per_kg=? WHERE id=?")) {
-                                stmt.setDouble(1, g); stmt.setDouble(2, d);
-                                stmt.setDouble(3, p); stmt.setInt(4, finalRow.recordId());
-                                stmt.executeUpdate();
-                            }
-                            allRows_refresh(rows, supplierId, table, filterType, balanceLabel);
-                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
-                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                            AsyncHelper.runVoid(
+                                    () -> {
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(
+                                                     "UPDATE supplier_transactions SET gross_weight=?, deduction_kg=?, price_per_kg=? WHERE id=?")) {
+                                            stmt.setDouble(1, g); stmt.setDouble(2, d);
+                                            stmt.setDouble(3, p); stmt.setInt(4, finalRow.recordId());
+                                            stmt.executeUpdate();
+                                        }
+                                    },
+                                    () -> {
+                                        reload(balanceLabel, table, rows, supplierId, filterType);
+                                        ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                                    },
+                                    error -> errLbl.setText("خطأ"),
+                                    saveEdit
+                            );
+                        } catch (NumberFormatException ex) { errLbl.setText("خطأ"); }
                     });
 
                     VBox dl = new VBox(10,
@@ -419,42 +490,62 @@ public class SupplierDetailContent {
                     DialogHelper.create("تعديل بضاعة", dl, 320, 280).show();
 
                 } else {
-                    // تعديل سحب
                     TextField amtField = new TextField(); amtField.setPromptText("المبلغ");
                     ComboBox<String> methodEdit = new ComboBox<>(
                             FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي"));
                     TextField notesEdit = new TextField(); notesEdit.setPromptText("ملاحظة");
-
-                    try (Connection conn = DatabaseManager_online.getConnection();
-                         PreparedStatement stmt = conn.prepareStatement(
-                                 "SELECT amount, payment_method, notes FROM supplier_withdrawals WHERE id = ?")) {
-                        stmt.setInt(1, finalRow.recordId());
-                        ResultSet rs = stmt.executeQuery();
-                        if (rs.next()) {
-                            amtField.setText(String.valueOf(rs.getDouble("amount")));
-                            methodEdit.setValue(rs.getString("payment_method"));
-                            notesEdit.setText(rs.getString("notes") != null ? rs.getString("notes") : "");
-                        }
-                    } catch (SQLException ex) { System.err.println(ex.getMessage()); }
-
                     Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
                     Label errLbl = new Label("");
+                    saveEdit.setDisable(true);
+
+                    AsyncHelper.run(
+                            () -> {
+                                try (Connection conn = DatabaseManager_online.getConnection();
+                                     PreparedStatement stmt = conn.prepareStatement(
+                                             "SELECT amount, payment_method, notes FROM supplier_withdrawals WHERE id = ?")) {
+                                    stmt.setInt(1, finalRow.recordId());
+                                    ResultSet rs = stmt.executeQuery();
+                                    if (rs.next()) {
+                                        return new Object[]{rs.getDouble("amount"), rs.getString("payment_method"), rs.getString("notes")};
+                                    }
+                                }
+                                return null;
+                            },
+                            vals -> {
+                                if (vals != null) {
+                                    amtField.setText(String.valueOf(vals[0]));
+                                    methodEdit.setValue((String) vals[1]);
+                                    notesEdit.setText(vals[2] != null ? (String) vals[2] : "");
+                                }
+                                saveEdit.setDisable(false);
+                            }
+                    );
 
                     saveEdit.setOnAction(ev -> {
                         try {
                             double amt = Double.parseDouble(amtField.getText().trim());
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(
-                                         "UPDATE supplier_withdrawals SET amount=?, payment_method=?, notes=? WHERE id=?")) {
-                                stmt.setDouble(1, amt);
-                                stmt.setString(2, methodEdit.getValue());
-                                stmt.setString(3, notesEdit.getText().trim());
-                                stmt.setInt(4, finalRow.recordId());
-                                stmt.executeUpdate();
-                            }
-                            allRows_refresh(rows, supplierId, table, filterType, balanceLabel);
-                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
-                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                            String method = methodEdit.getValue();
+                            String notes = notesEdit.getText().trim();
+                            AsyncHelper.runVoid(
+                                    () -> {
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(
+                                                     "UPDATE supplier_withdrawals SET amount=?, payment_method=?, notes=? WHERE id=?")) {
+                                            stmt.setDouble(1, amt);
+                                            stmt.setString(2, method);
+                                            stmt.setString(3, notes);
+                                            stmt.setInt(4, finalRow.recordId());
+                                            stmt.executeUpdate();
+                                        }
+                                    },
+                                    () -> {
+                                        reload(balanceLabel, table, rows, supplierId, filterType);
+                                        ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                                    },
+                                    error -> errLbl.setText("خطأ"),
+                                    saveEdit
+                            );
+                        } catch (NumberFormatException ex) { errLbl.setText("خطأ"); }
                     });
 
                     VBox dl = new VBox(10,
@@ -475,14 +566,18 @@ public class SupplierDetailContent {
                         String delSql = finalRow.type().equals("بضاعة") ?
                                 "DELETE FROM supplier_transactions WHERE id = ?" :
                                 "DELETE FROM supplier_withdrawals WHERE id = ?";
-                        try (Connection conn = DatabaseManager_online.getConnection();
-                             PreparedStatement stmt = conn.prepareStatement(delSql)) {
-                            stmt.setInt(1, finalRow.recordId());
-                            stmt.executeUpdate();
-                            rows.remove(finalRow);
-                            renderTable(table, rows, filterType, supplierId, balanceLabel);
-                            refreshBalance(balanceLabel, supplierId);
-                        } catch (SQLException ex) { System.err.println(ex.getMessage()); }
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.runVoid(
+                                () -> {
+                                    try (Connection conn = DatabaseManager_online.getConnection();
+                                         PreparedStatement stmt = conn.prepareStatement(delSql)) {
+                                        stmt.setInt(1, finalRow.recordId());
+                                        stmt.executeUpdate();
+                                    }
+                                },
+                                () -> reload(balanceLabel, table, rows, supplierId, filterType),
+                                error -> reload(balanceLabel, table, rows, supplierId, filterType)
+                        );
                     }
                 });
             });
@@ -496,14 +591,6 @@ public class SupplierDetailContent {
             empty.setStyle("-fx-text-fill: #888780; -fx-padding: 16; -fx-font-size: 13px;");
             table.getChildren().add(empty);
         }
-    }
-
-    private static void allRows_refresh(List<HistoryRow> rows, int supplierId, VBox table,
-                                        String filterType, Label balanceLabel) {
-        rows.clear();
-        loadRows(rows, supplierId);
-        renderTable(table, rows, filterType, supplierId, balanceLabel);
-        refreshBalance(balanceLabel, supplierId);
     }
 
     private static Button filterBtn(String text) {
@@ -520,12 +607,4 @@ public class SupplierDetailContent {
                 b.setStyle("-fx-font-size: 11px; -fx-padding: 4 12; -fx-border-radius: 4; -fx-background-radius: 4; -fx-background-color: white; -fx-border-color: #c0c0c0; -fx-text-fill: #1a1a18; -fx-cursor: hand;");
         }
     }
-
-    private static void refreshBalance(Label lbl, int supplierId) {
-        double balance = SupplierDAO.getSupplierBalance(supplierId);
-        lbl.setText(String.format("الرصيد: %.2f جنيه", balance));
-        lbl.getStyleClass().removeAll("label-balance-positive", "label-balance-negative");
-        lbl.getStyleClass().add(balance >= 0 ? "label-balance-positive" : "label-balance-negative");
-    }
-
 }

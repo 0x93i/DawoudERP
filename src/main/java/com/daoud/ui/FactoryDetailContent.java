@@ -4,7 +4,6 @@ import com.daoud.dao.FactoryDAO;
 import com.daoud.db.VaultHelper;
 import com.daoud.model.Factory;
 import com.daoud.db.DatabaseManager_online;
-import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -19,16 +18,18 @@ public class FactoryDetailContent {
 
     record HistoryRow(String type, int recordId, String date, String netWeight, String pct, String dedKg, String price, String amount, String supplierName) {}
 
+    private record FactoryData(double balance, List<HistoryRow> rows) {}
+
     public static Node build(int userId, String username, String role, Factory factory) {
 
-        Label balanceLabel = new Label();
-        refreshBalance(balanceLabel, factory.getId());
+        Label balanceLabel = new Label("جاري التحميل...");
 
         List<HistoryRow> allRows = new ArrayList<>();
         VBox tableBody = new VBox(0);
+        tableBody.getChildren().add(new Label("جاري التحميل..."));
         HBox filtersBox = buildFilters(tableBody, allRows, factory.getId(), balanceLabel);
-        loadRows(allRows, factory.getId());
-        renderTable(tableBody, allRows, null, factory.getId(), balanceLabel);
+
+        reload(balanceLabel, tableBody, allRows, factory.getId(), null);
 
         // ── شحنة ──
         TextField supplierNameField = new TextField(); supplierNameField.setPromptText("اسم المورد (اختياري)");
@@ -69,17 +70,22 @@ public class FactoryDetailContent {
                 double gross = Double.parseDouble(grossWeightField.getText().trim());
                 double pct = deductionKgField.getText().trim().isEmpty() ? 0 : Double.parseDouble(deductionKgField.getText().trim());
                 double price = Double.parseDouble(priceField.getText().trim());
-                double dk = gross * (pct / 100.0);
+                String supplierName = supplierNameField.getText().trim();
 
-                FactoryDAO.addShipment(factory.getId(), supplierNameField.getText().trim(), gross, pct, price, userId);
-                grossWeightField.clear(); deductionKgField.clear(); priceField.clear(); supplierNameField.clear();
-                deductionPctLabel.setText("نسبة الخصم: —");
-                netWeightLabel.setText("الوزن الصافي: —");
-                totalLabel.setText("الإجمالي: —");
-                shipMsg.setText("تم ✓");
-                refreshBalance(balanceLabel, factory.getId());
-                allRows.clear(); loadRows(allRows, factory.getId());
-                renderTable(tableBody, allRows, null, factory.getId(), balanceLabel);
+                shipMsg.setText("جاري الحفظ...");
+                AsyncHelper.runVoid(
+                        () -> FactoryDAO.addShipment(factory.getId(), supplierName, gross, pct, price, userId),
+                        () -> {
+                            grossWeightField.clear(); deductionKgField.clear(); priceField.clear(); supplierNameField.clear();
+                            deductionPctLabel.setText("نسبة الخصم: —");
+                            netWeightLabel.setText("الوزن الصافي: —");
+                            totalLabel.setText("الإجمالي: —");
+                            shipMsg.setText("تم ✓");
+                            reload(balanceLabel, tableBody, allRows, factory.getId(), null);
+                        },
+                        error -> shipMsg.setText("خطأ أثناء الحفظ"),
+                        saveShipBtn
+                );
             } catch (NumberFormatException ex) { shipMsg.setText("تأكد من الأرقام"); }
         });
 
@@ -98,16 +104,26 @@ public class FactoryDetailContent {
         savePayBtn.setOnAction(e -> {
             try {
                 double amount = Double.parseDouble(payAmount.getText().trim());
-                FactoryDAO.addPayment(factory.getId(), amount, payNotes.getText().trim(), userId);
-                VaultHelper.record(VaultHelper.getAdminTreasuryId(), "in",
-                        VaultHelper.toPaymentType(payMethodCombo.getValue()),
-                        amount, "دفعة من مصنع: " + factory.getName(),
-                        payNotes.getText().trim(), userId);
-                payAmount.clear(); payNotes.clear();
-                payMsg.setText("تم ✓");
-                refreshBalance(balanceLabel, factory.getId());
-                allRows.clear(); loadRows(allRows, factory.getId());
-                renderTable(tableBody, allRows, null, factory.getId(), balanceLabel);
+                String notes = payNotes.getText().trim();
+                String method = payMethodCombo.getValue();
+
+                payMsg.setText("جاري الحفظ...");
+                AsyncHelper.runVoid(
+                        () -> {
+                            FactoryDAO.addPayment(factory.getId(), amount, notes, userId);
+                            VaultHelper.record(VaultHelper.getAdminTreasuryId(), "in",
+                                    VaultHelper.toPaymentType(method),
+                                    amount, "دفعة من مصنع: " + factory.getName(),
+                                    notes, userId);
+                        },
+                        () -> {
+                            payAmount.clear(); payNotes.clear();
+                            payMsg.setText("تم ✓");
+                            reload(balanceLabel, tableBody, allRows, factory.getId(), null);
+                        },
+                        error -> payMsg.setText("خطأ أثناء الحفظ"),
+                        savePayBtn
+                );
             } catch (NumberFormatException ex) { payMsg.setText("ادخل رقم"); }
         });
 
@@ -178,7 +194,28 @@ public class FactoryDetailContent {
         return header;
     }
 
-    private static void loadRows(List<HistoryRow> rows, int factoryId) {
+    // ── تحميل الرصيد + سجل المعاملات مع بعض في الخلفية ──
+    private static void reload(Label balanceLabel, VBox tableBody, List<HistoryRow> allRows, int factoryId, String filterType) {
+        AsyncHelper.run(
+                () -> new FactoryData(FactoryDAO.getFactoryBalance(factoryId), loadRows(factoryId)),
+                data -> {
+                    setBalanceText(balanceLabel, data.balance());
+                    allRows.clear();
+                    allRows.addAll(data.rows());
+                    renderTable(tableBody, allRows, filterType, factoryId, balanceLabel);
+                },
+                error -> balanceLabel.setText("حصل خطأ في تحميل البيانات")
+        );
+    }
+
+    private static void setBalanceText(Label lbl, double balance) {
+        lbl.setText(String.format(balance >= 0 ? "المصنع مدين لعم داود: %.2f جنيه" : "عم داود مدين للمصنع: %.2f جنيه", Math.abs(balance)));
+        lbl.getStyleClass().removeAll("label-balance-positive", "label-balance-negative");
+        lbl.getStyleClass().add(balance >= 0 ? "label-balance-positive" : "label-balance-negative");
+    }
+
+    private static List<HistoryRow> loadRows(int factoryId) {
+        List<HistoryRow> rows = new ArrayList<>();
         // شحنات
         String sql1 = "SELECT id, shipment_date, net_weight, deduction_pct, deduction_kg, price_per_kg, total_amount, COALESCE(supplier_name,'') as supplier_name " +
                 "FROM factory_shipments WHERE factory_id = ? ORDER BY shipment_date DESC LIMIT 30";
@@ -214,6 +251,7 @@ public class FactoryDetailContent {
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
         rows.sort((a, b) -> b.date().compareTo(a.date()));
+        return rows;
     }
 
     private static void renderTable(VBox table, List<HistoryRow> rows, String filterType,
@@ -277,22 +315,33 @@ public class FactoryDetailContent {
                     TextField df = new TextField(); df.setPromptText("كمية الخصم");
                     TextField pf = new TextField(); pf.setPromptText("سعر الكيلو");
                     TextField sf = new TextField(); sf.setPromptText("اسم المورد");
-
-                    try (Connection conn = DatabaseManager_online.getConnection();
-                         PreparedStatement stmt = conn.prepareStatement(
-                                 "SELECT gross_weight, deduction_kg, price_per_kg, supplier_name FROM factory_shipments WHERE id = ?")) {
-                        stmt.setInt(1, finalRow.recordId());
-                        ResultSet rs = stmt.executeQuery();
-                        if (rs.next()) {
-                            gf.setText(String.valueOf(rs.getDouble("gross_weight")));
-                            df.setText(String.valueOf(rs.getDouble("deduction_kg")));
-                            pf.setText(String.valueOf(rs.getDouble("price_per_kg")));
-                            sf.setText(rs.getString("supplier_name") != null ? rs.getString("supplier_name") : "");
-                        }
-                    } catch (SQLException ex) { System.err.println(ex.getMessage()); }
-
                     Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
                     Label errLbl = new Label("");
+                    saveEdit.setDisable(true);
+
+                    AsyncHelper.run(
+                            () -> {
+                                try (Connection conn = DatabaseManager_online.getConnection();
+                                     PreparedStatement stmt = conn.prepareStatement(
+                                             "SELECT gross_weight, deduction_kg, price_per_kg, supplier_name FROM factory_shipments WHERE id = ?")) {
+                                    stmt.setInt(1, finalRow.recordId());
+                                    ResultSet rs = stmt.executeQuery();
+                                    if (rs.next()) {
+                                        return new double[]{rs.getDouble("gross_weight"), rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg")};
+                                    }
+                                }
+                                return null;
+                            },
+                            vals -> {
+                                if (vals != null) {
+                                    gf.setText(String.valueOf(vals[0]));
+                                    df.setText(String.valueOf(vals[1]));
+                                    pf.setText(String.valueOf(vals[2]));
+                                }
+                                sf.setText(finalRow.supplierName().equals("—") ? "" : finalRow.supplierName());
+                                saveEdit.setDisable(false);
+                            }
+                    );
 
                     saveEdit.setOnAction(ev -> {
                         try {
@@ -302,21 +351,29 @@ public class FactoryDetailContent {
                             double net = g - d;
                             double pct = g > 0 ? (d / g * 100) : 0;
                             double total = net * p;
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(
-                                         "UPDATE factory_shipments SET gross_weight=?, deduction_kg=?, net_weight=?, deduction_pct=?, price_per_kg=?, total_amount=?, supplier_name=? WHERE id=?")) {
-                                stmt.setDouble(1, g); stmt.setDouble(2, d);
-                                stmt.setDouble(3, net); stmt.setDouble(4, pct);
-                                stmt.setDouble(5, p); stmt.setDouble(6, total);
-                                stmt.setString(7, sf.getText().trim());
-                                stmt.setInt(8, finalRow.recordId());
-                                stmt.executeUpdate();
-                            }
-                            rows.clear(); loadRows(rows, factoryId);
-                            renderTable(table, rows, filterType, factoryId, balanceLabel);
-                            refreshBalance(balanceLabel, factoryId);
-                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
-                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                            String supplierName = sf.getText().trim();
+
+                            AsyncHelper.runVoid(
+                                    () -> {
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(
+                                                     "UPDATE factory_shipments SET gross_weight=?, deduction_kg=?, net_weight=?, deduction_pct=?, price_per_kg=?, total_amount=?, supplier_name=? WHERE id=?")) {
+                                            stmt.setDouble(1, g); stmt.setDouble(2, d);
+                                            stmt.setDouble(3, net); stmt.setDouble(4, pct);
+                                            stmt.setDouble(5, p); stmt.setDouble(6, total);
+                                            stmt.setString(7, supplierName);
+                                            stmt.setInt(8, finalRow.recordId());
+                                            stmt.executeUpdate();
+                                        }
+                                    },
+                                    () -> {
+                                        reload(balanceLabel, table, rows, factoryId, filterType);
+                                        ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                                    },
+                                    error -> errLbl.setText("خطأ"),
+                                    saveEdit
+                            );
+                        } catch (NumberFormatException ex) { errLbl.setText("خطأ"); }
                     });
 
                     VBox dl = new VBox(10,
@@ -331,37 +388,55 @@ public class FactoryDetailContent {
                 } else {
                     TextField amtEdit = new TextField(); amtEdit.setPromptText("المبلغ");
                     TextField notesEdit = new TextField(); notesEdit.setPromptText("ملاحظة");
-
-                    try (Connection conn = DatabaseManager_online.getConnection();
-                         PreparedStatement stmt = conn.prepareStatement(
-                                 "SELECT amount, notes FROM factory_payments WHERE id = ?")) {
-                        stmt.setInt(1, finalRow.recordId());
-                        ResultSet rs = stmt.executeQuery();
-                        if (rs.next()) {
-                            amtEdit.setText(String.valueOf(rs.getDouble("amount")));
-                            notesEdit.setText(rs.getString("notes") != null ? rs.getString("notes") : "");
-                        }
-                    } catch (SQLException ex) { System.err.println(ex.getMessage()); }
-
                     Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
                     Label errLbl = new Label("");
+                    saveEdit.setDisable(true);
+
+                    AsyncHelper.run(
+                            () -> {
+                                try (Connection conn = DatabaseManager_online.getConnection();
+                                     PreparedStatement stmt = conn.prepareStatement(
+                                             "SELECT amount, notes FROM factory_payments WHERE id = ?")) {
+                                    stmt.setInt(1, finalRow.recordId());
+                                    ResultSet rs = stmt.executeQuery();
+                                    if (rs.next()) {
+                                        return new Object[]{rs.getDouble("amount"), rs.getString("notes")};
+                                    }
+                                }
+                                return null;
+                            },
+                            vals -> {
+                                if (vals != null) {
+                                    amtEdit.setText(String.valueOf(vals[0]));
+                                    notesEdit.setText(vals[1] != null ? (String) vals[1] : "");
+                                }
+                                saveEdit.setDisable(false);
+                            }
+                    );
 
                     saveEdit.setOnAction(ev -> {
                         try {
                             double amt = Double.parseDouble(amtEdit.getText().trim());
-                            try (Connection conn = DatabaseManager_online.getConnection();
-                                 PreparedStatement stmt = conn.prepareStatement(
-                                         "UPDATE factory_payments SET amount=?, notes=? WHERE id=?")) {
-                                stmt.setDouble(1, amt);
-                                stmt.setString(2, notesEdit.getText().trim());
-                                stmt.setInt(3, finalRow.recordId());
-                                stmt.executeUpdate();
-                            }
-                            rows.clear(); loadRows(rows, factoryId);
-                            renderTable(table, rows, filterType, factoryId, balanceLabel);
-                            refreshBalance(balanceLabel, factoryId);
-                            ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
-                        } catch (NumberFormatException | SQLException ex) { errLbl.setText("خطأ"); }
+                            String notes = notesEdit.getText().trim();
+                            AsyncHelper.runVoid(
+                                    () -> {
+                                        try (Connection conn = DatabaseManager_online.getConnection();
+                                             PreparedStatement stmt = conn.prepareStatement(
+                                                     "UPDATE factory_payments SET amount=?, notes=? WHERE id=?")) {
+                                            stmt.setDouble(1, amt);
+                                            stmt.setString(2, notes);
+                                            stmt.setInt(3, finalRow.recordId());
+                                            stmt.executeUpdate();
+                                        }
+                                    },
+                                    () -> {
+                                        reload(balanceLabel, table, rows, factoryId, filterType);
+                                        ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
+                                    },
+                                    error -> errLbl.setText("خطأ"),
+                                    saveEdit
+                            );
+                        } catch (NumberFormatException ex) { errLbl.setText("خطأ"); }
                     });
 
                     VBox dl = new VBox(10,
@@ -381,14 +456,18 @@ public class FactoryDetailContent {
                         String delSql = finalRow.type().equals("شحنة") ?
                                 "DELETE FROM factory_shipments WHERE id = ?" :
                                 "DELETE FROM factory_payments WHERE id = ?";
-                        try (Connection conn = DatabaseManager_online.getConnection();
-                             PreparedStatement stmt = conn.prepareStatement(delSql)) {
-                            stmt.setInt(1, finalRow.recordId());
-                            stmt.executeUpdate();
-                            rows.remove(finalRow);
-                            renderTable(table, rows, filterType, factoryId, balanceLabel);
-                            refreshBalance(balanceLabel, factoryId);
-                        } catch (SQLException ex) { System.err.println(ex.getMessage()); }
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.runVoid(
+                                () -> {
+                                    try (Connection conn = DatabaseManager_online.getConnection();
+                                         PreparedStatement stmt = conn.prepareStatement(delSql)) {
+                                        stmt.setInt(1, finalRow.recordId());
+                                        stmt.executeUpdate();
+                                    }
+                                },
+                                () -> reload(balanceLabel, table, rows, factoryId, filterType),
+                                error -> reload(balanceLabel, table, rows, factoryId, filterType)
+                        );
                     }
                 });
             });
@@ -417,12 +496,5 @@ public class FactoryDetailContent {
             else
                 b.setStyle("-fx-font-size: 11px; -fx-padding: 4 12; -fx-border-radius: 4; -fx-background-radius: 4; -fx-background-color: white; -fx-border-color: #c0c0c0; -fx-text-fill: #1a1a18; -fx-cursor: hand;");
         }
-    }
-
-    private static void refreshBalance(Label lbl, int factoryId) {
-        double balance = FactoryDAO.getFactoryBalance(factoryId);
-        lbl.setText(String.format(balance >= 0 ? "المصنع مدين لعم داود: %.2f جنيه" : "عم داود مدين للمصنع: %.2f جنيه", Math.abs(balance)));
-        lbl.getStyleClass().removeAll("label-balance-positive", "label-balance-negative");
-        lbl.getStyleClass().add(balance >= 0 ? "label-balance-positive" : "label-balance-negative");
     }
 }

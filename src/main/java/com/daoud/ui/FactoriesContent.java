@@ -16,6 +16,7 @@ public class FactoriesContent {
         ListView<Factory> listView = new ListView<>();
         listView.getStyleClass().add("list-view");
         listView.setPrefHeight(400);
+        listView.setPlaceholder(new Label("جاري تحميل المصانع..."));
         refreshList(listView);
 
         Button addBtn = new Button("إضافة مصنع");
@@ -46,9 +47,15 @@ public class FactoriesContent {
             Stage dialog = DialogHelper.create("إضافة مصنع", layout, 320, 180);
             saveBtn.setOnAction(ev -> {
                 if (nameField.getText().trim().isEmpty()) { errLbl.setText("الاسم مطلوب"); return; }
-                FactoryDAO.addFactory(nameField.getText().trim(), userId);
-                refreshList(listView);
-                dialog.close();
+                String name = nameField.getText().trim();
+                errLbl.setStyle("-fx-text-fill: #5f5e5a;");
+                errLbl.setText("جاري الحفظ...");
+                AsyncHelper.runVoid(
+                        () -> FactoryDAO.addFactory(name, userId),
+                        () -> { refreshList(listView); dialog.close(); },
+                        error -> { errLbl.setStyle("-fx-text-fill: #b91c1c;"); errLbl.setText("حصل خطأ"); },
+                        saveBtn
+                );
             });
             dialog.show();
         });
@@ -59,8 +66,12 @@ public class FactoriesContent {
                 Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "هتحذف: " + selected.getName() + "؟");
                 confirm.showAndWait().ifPresent(r -> {
                     if (r == ButtonType.OK) {
-                        FactoryDAO.deleteFactory(selected.getId());
-                        refreshList(listView);
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.runVoid(
+                                () -> FactoryDAO.deleteFactory(selected.getId()),
+                                () -> refreshList(listView),
+                                error -> refreshList(listView)
+                        );
                     }
                 });
             }
@@ -87,6 +98,10 @@ public class FactoriesContent {
     }
 
     private static void refreshList(ListView<Factory> listView) {
-        listView.setItems(FXCollections.observableArrayList(FactoryDAO.getAllFactories()));
+        AsyncHelper.run(
+                FactoryDAO::getAllFactories,
+                factories -> listView.setItems(FXCollections.observableArrayList(factories)),
+                error -> listView.setPlaceholder(new Label("حصل خطأ في تحميل المصانع"))
+        );
     }
 }
