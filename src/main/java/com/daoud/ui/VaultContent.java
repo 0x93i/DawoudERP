@@ -1,6 +1,8 @@
 package com.daoud.ui;
 
+import com.daoud.dao.FactoryDAO;
 import com.daoud.db.DatabaseManager_online;
+import com.daoud.model.Factory;
 import com.daoud.model.Supplier;
 import com.daoud.model.Worker;
 import javafx.collections.FXCollections;
@@ -21,7 +23,7 @@ public class VaultContent {
 
     record SummaryData(double cash, double bank, double wallet, double check) {}
 
-    record InitialData(List<Supplier> suppliers, List<Worker> workers,
+    record InitialData(List<Supplier> suppliers, List<Worker> workers, List<Factory> factories,
                        SummaryData summary, List<VaultRow> rows) {}
 
     public static Node build(int userId, String username, String role, int treasuryId, String treasuryName) {
@@ -40,6 +42,25 @@ public class VaultContent {
         // ── وجهة الصرف (للخروج فقط) ──
         ComboBox<String> targetTypeCombo = new ComboBox<>(FXCollections.observableArrayList("مصاريف", "مورد", "عامل"));
         targetTypeCombo.setPromptText("الصرف لمين؟"); targetTypeCombo.setMaxWidth(Double.MAX_VALUE);
+
+        // ── مصدر الدخول (للدخول فقط) ──
+        ComboBox<String> sourceTypeCombo = new ComboBox<>(FXCollections.observableArrayList("دخول عام", "من مصنع"));
+        sourceTypeCombo.setPromptText("الفلوس داخلة منين؟"); sourceTypeCombo.setMaxWidth(Double.MAX_VALUE);
+
+        ComboBox<Factory> factoryCombo = new ComboBox<>();
+        factoryCombo.setPromptText("اختار المصنع"); factoryCombo.setMaxWidth(Double.MAX_VALUE);
+        factoryCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(Factory item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        factoryCombo.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(Factory item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
 
         ComboBox<Supplier> supplierCombo = new ComboBox<>();
         supplierCombo.setPromptText("اختار المورد"); supplierCombo.setMaxWidth(Double.MAX_VALUE);
@@ -86,10 +107,21 @@ public class VaultContent {
         expenseRow.setVisible(false); expenseRow.setManaged(false);
         targetBox.getChildren().addAll(targetTypeRow, supplierRow, workerRow, expenseRow);
 
+        // ── صندوق مصدر الدخول (زي targetBox بالظبط بس للدخول) ──
+        VBox sourceBox = new VBox(8);
+        sourceBox.setVisible(false); sourceBox.setManaged(false);
+        VBox sourceTypeRow = new VBox(4, new Label("مصدر الدخول:"), sourceTypeCombo);
+        VBox factoryRow = new VBox(4, new Label("المصنع:"), factoryCombo);
+        factoryRow.setVisible(false); factoryRow.setManaged(false);
+        sourceBox.getChildren().addAll(sourceTypeRow, factoryRow);
+
         directionCombo.setOnAction(ev -> {
             boolean isOut = "خروج".equals(directionCombo.getValue());
+            boolean isIn = "دخول".equals(directionCombo.getValue());
             targetBox.setVisible(isOut); targetBox.setManaged(isOut);
             if (!isOut) targetTypeCombo.setValue(null);
+            sourceBox.setVisible(isIn); sourceBox.setManaged(isIn);
+            if (!isIn) { sourceTypeCombo.setValue(null); factoryRow.setVisible(false); factoryRow.setManaged(false); }
         });
 
         targetTypeCombo.setOnAction(ev -> {
@@ -98,6 +130,11 @@ public class VaultContent {
             supplierRow.setVisible(isSup); supplierRow.setManaged(isSup);
             workerRow.setVisible(isWork); workerRow.setManaged(isWork);
             expenseRow.setVisible(isExp); expenseRow.setManaged(isExp);
+        });
+
+        sourceTypeCombo.setOnAction(ev -> {
+            boolean isFactory = "من مصنع".equals(sourceTypeCombo.getValue());
+            factoryRow.setVisible(isFactory); factoryRow.setManaged(isFactory);
         });
 
         Button saveBtn = new Button("تسجيل"); saveBtn.getStyleClass().add("btn-primary");
@@ -114,6 +151,7 @@ public class VaultContent {
                 new HBox(8, new VBox(4, new Label("الاتجاه:"), directionCombo), new VBox(4, new Label("نوع الدفع:"), paymentCombo)),
                 new VBox(4, new Label("المبلغ:"), amountField),
                 targetBox,
+                sourceBox,
                 new VBox(4, new Label("ملاحظة:"), notesField), saveBtn, saveMsg);
 
         HBox.setHgrow(directionCombo, Priority.ALWAYS); HBox.setHgrow(paymentCombo, Priority.ALWAYS);
@@ -126,11 +164,13 @@ public class VaultContent {
                 () -> new InitialData(
                         com.daoud.dao.SupplierDAO.getAllSuppliers(),
                         loadAllWorkers(),
+                        FactoryDAO.getAllFactories(),
                         loadSummary(treasuryId),
                         loadRowsFor(treasuryId)),
                 data -> {
                     supplierCombo.setItems(FXCollections.observableArrayList(data.suppliers()));
                     workerCombo.setItems(FXCollections.observableArrayList(data.workers()));
+                    factoryCombo.setItems(FXCollections.observableArrayList(data.factories()));
                     renderSummary(summaryCard, data.summary(), treasuryName);
                     allRows.clear(); allRows.addAll(data.rows());
                     renderTable(tableBody, allRows, null, treasuryId, summaryCard, treasuryName);
@@ -147,6 +187,7 @@ public class VaultContent {
 
             boolean isOut = "خروج".equals(directionCombo.getValue());
             String category;
+            Factory sourceFactory = null;
 
             if (isOut) {
                 String t = targetTypeCombo.getValue();
@@ -162,7 +203,14 @@ public class VaultContent {
                     category = "مصاريف: " + expenseDetailsField.getText().trim();
                 }
             } else {
-                category = "دخول";
+                String s = sourceTypeCombo.getValue();
+                if (s != null && s.equals("من مصنع")) {
+                    if (factoryCombo.getValue() == null) { saveMsg.setText("اختار المصنع"); return; }
+                    sourceFactory = factoryCombo.getValue();
+                    category = "مصنع: " + sourceFactory.getName();
+                } else {
+                    category = "دخول";
+                }
             }
 
             double amount;
@@ -172,6 +220,7 @@ public class VaultContent {
 
             final String finalCategory = category;
             final boolean finalIsOut = isOut;
+            final Factory finalSourceFactory = sourceFactory;
             final String direction = isOut ? "out" : "in";
             final String paymentType = switch (paymentCombo.getValue()) {
                 case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
@@ -192,6 +241,12 @@ public class VaultContent {
                             stmt.setString(6, notes); stmt.setInt(7, userId);
                             stmt.executeUpdate();
                         }
+                        // لو الدخول ده دفعة من مصنع، بنسجلها كمان في حساب المصنع نفسه
+                        // (factory_payments) عشان رصيد "المصنع مدين لعم داود" يتحدث معاها،
+                        // بالظبط زي لو كانت اتسجلت من صفحة المصنع نفسها.
+                        if (finalSourceFactory != null) {
+                            FactoryDAO.addPayment(finalSourceFactory.getId(), amount, notes, userId);
+                        }
                         return "OK";
                     },
                     result -> {
@@ -204,10 +259,13 @@ public class VaultContent {
                         directionCombo.setValue(null); paymentCombo.setValue(null);
                         targetTypeCombo.setValue(null);
                         supplierCombo.setValue(null); workerCombo.setValue(null);
+                        sourceTypeCombo.setValue(null); factoryCombo.setValue(null);
                         targetBox.setVisible(false); targetBox.setManaged(false);
                         supplierRow.setVisible(false); supplierRow.setManaged(false);
                         workerRow.setVisible(false); workerRow.setManaged(false);
                         expenseRow.setVisible(false); expenseRow.setManaged(false);
+                        sourceBox.setVisible(false); sourceBox.setManaged(false);
+                        factoryRow.setVisible(false); factoryRow.setManaged(false);
 
                         saveMsg.setText("تم ✓");
                         reload(summaryCard, tableBody, allRows, treasuryId, null, treasuryName);

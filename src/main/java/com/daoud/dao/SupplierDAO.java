@@ -1,13 +1,47 @@
 package com.daoud.dao;
 
 import com.daoud.db.DatabaseManager_online;
+import com.daoud.model.ReportRow;
 import com.daoud.model.Supplier;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class SupplierDAO {
+
+    /**
+     * تقرير المورد: كل البضاعة اللي اتسجلت من المورد ده في فترة معيّنة، بالسعر
+     * اللي عم داود اشترى بيه منه (سعر الشراء)، بنفس شكل تقرير المصنع.
+     */
+    public static List<ReportRow> getSupplierReport(int supplierId, String supplierName, LocalDate from, LocalDate to) {
+        List<ReportRow> list = new ArrayList<>();
+        // مقارنة نصية (yyyy-MM-dd) بدل مقارنة تاريخ مباشرة، بنفس الطريقة اللي
+        // حلّت مشكلة كمية الشهر — عشان تفضل شغالة صح مهما كان نوع العمود بالظبط.
+        String sql = "SELECT transaction_date, gross_weight, deduction_kg, price_per_kg " +
+                "FROM supplier_transactions WHERE supplier_id = ? AND transaction_date::text >= ? AND transaction_date::text <= ? " +
+                "ORDER BY transaction_date";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, supplierId);
+            stmt.setString(2, from.toString());
+            stmt.setString(3, to.toString());
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                double gross = rs.getDouble("gross_weight");
+                double ded = rs.getDouble("deduction_kg");
+                double price = rs.getDouble("price_per_kg");
+                double net = gross - ded;
+                double pct = gross > 0 ? (ded / gross * 100) : 0;
+                list.add(new ReportRow(rs.getString("transaction_date"), "—", supplierName,
+                        gross, pct, ded, price, net * price));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return list;
+    }
 
     public static List<Supplier> getAllSuppliers() {
         List<Supplier> list = new ArrayList<>();

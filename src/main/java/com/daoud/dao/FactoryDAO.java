@@ -2,12 +2,46 @@ package com.daoud.dao;
 
 import com.daoud.db.DatabaseManager_online;
 import com.daoud.model.Factory;
+import com.daoud.model.ReportRow;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FactoryDAO {
+
+    /**
+     * تقرير المصنع: كل الشحنات اللي راحت للمصنع ده في فترة معيّنة، بالسعر
+     * اللي المصنع اشترى بيه (سعر بيع البضاعة للمصنع).
+     */
+    public static List<ReportRow> getFactoryReport(int factoryId, LocalDate from, LocalDate to) {
+        List<ReportRow> list = new ArrayList<>();
+        // مقارنة نصية (yyyy-MM-dd) بدل مقارنة تاريخ مباشرة، بنفس الطريقة اللي
+        // حلّت مشكلة كمية الشهر — عشان تفضل شغالة صح مهما كان نوع العمود بالظبط.
+        String sql = "SELECT shipment_date, COALESCE(supplier_name,'') as supplier_name, " +
+                "gross_weight, deduction_pct, deduction_kg, price_per_kg, total_amount " +
+                "FROM factory_shipments WHERE factory_id = ? AND shipment_date::text >= ? AND shipment_date::text <= ? " +
+                "ORDER BY shipment_date";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, factoryId);
+            stmt.setString(2, from.toString());
+            stmt.setString(3, to.toString());
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String supplierName = rs.getString("supplier_name");
+                list.add(new ReportRow(rs.getString("shipment_date"), "—",
+                        supplierName != null && !supplierName.isEmpty() ? supplierName : "—",
+                        rs.getDouble("gross_weight"), rs.getDouble("deduction_pct"),
+                        rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg"),
+                        rs.getDouble("total_amount")));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return list;
+    }
 
     public static List<Factory> getAllFactories() {
         List<Factory> list = new ArrayList<>();

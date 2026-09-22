@@ -64,6 +64,10 @@ public class MainLayout {
                         setTitle("الأرضيات");
                         loadContent(FloorsContent.build(userId, username, role));
                     }),
+                    navBtn("التقارير", () -> {
+                        setTitle("التقارير");
+                        loadContent(ReportsContent.build(userId, username, role));
+                    }),
                     navBtn("إدارة المستخدمين", () -> {
                         setTitle("إدارة المستخدمين");
                         loadContent(UsersContent.build(userId, username, role));
