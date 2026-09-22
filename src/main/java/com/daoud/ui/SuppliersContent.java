@@ -56,7 +56,7 @@ public class SuppliersContent {
     }
 
     private static Node buildCard(List<Warehouse> warehouses, List<SupplierRow> allRows,
-                                  int userId, String username, String role) {
+                                   int userId, String username, String role) {
 
         VBox tableBody = new VBox(0);
 
@@ -143,12 +143,12 @@ public class SuppliersContent {
     private static List<SupplierRow> loadAllSupplierRowsWithWarehouse() {
         List<SupplierRow> rows = new ArrayList<>();
         String sql = """
-            SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date,
+            SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date, s.supplier_no,
                    (SELECT w.name FROM warehouses w
                     JOIN warehouse_suppliers ws ON w.id = ws.warehouse_id
                     WHERE ws.supplier_id = s.id LIMIT 1) AS warehouse_name
             FROM suppliers s
-            ORDER BY s.name
+            ORDER BY s.supplier_no NULLS LAST, s.name
         """;
         try (Connection conn = DatabaseManager_online.getConnection();
              Statement stmt = conn.createStatement();
@@ -160,7 +160,8 @@ public class SuppliersContent {
                         rs.getString("phone"),
                         rs.getString("sector"),
                         rs.getDouble("floor_amount"),
-                        rs.getString("floor_date")
+                        rs.getString("floor_date"),
+                        rs.getInt("supplier_no")
                 );
                 rows.add(new SupplierRow(s, rs.getString("warehouse_name")));
             }
@@ -173,8 +174,8 @@ public class SuppliersContent {
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"اسم المورد", "التليفون", "القطاع", "الأرضية", "النوع", "", "", ""};
-        double[] widths = {150, 110, 110, 90, 130, 110, 70, 70};
+        String[] cols = {"رقم", "اسم المورد", "التليفون", "القطاع", "الأرضية", "النوع", "", "", ""};
+        double[] widths = {50, 150, 110, 110, 90, 130, 110, 70, 70};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -187,7 +188,7 @@ public class SuppliersContent {
     private static void renderTable(VBox table, List<SupplierRow> rows, String filter,
                                     int userId, String username, String role) {
         table.getChildren().clear();
-        double[] widths = {150, 110, 110, 90, 130, 110, 70, 70};
+        double[] widths = {50, 150, 110, 110, 90, 130, 110, 70, 70};
         boolean odd = true, hasRows = false;
 
         for (SupplierRow row : rows) {
@@ -205,23 +206,27 @@ public class SuppliersContent {
                     "; -fx-padding: 8 10; -fx-border-color: transparent transparent #f0f0f0 transparent; -fx-cursor: hand;");
             odd = !odd;
 
+            Label numLbl = new Label(row.supplier().getSupplierNo() > 0 ? String.valueOf(row.supplier().getSupplierNo()) : "—");
+            numLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #5f5e5a;");
+            numLbl.setMinWidth(widths[0]); numLbl.setPrefWidth(widths[0]);
+
             Label nameLbl = new Label(row.supplier().getName());
             nameLbl.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1a1a18;");
-            nameLbl.setMinWidth(widths[0]); nameLbl.setPrefWidth(widths[0]);
+            nameLbl.setMinWidth(widths[1]); nameLbl.setPrefWidth(widths[1]);
 
             Label phoneLbl = new Label(row.supplier().getPhone() != null && !row.supplier().getPhone().isEmpty() ?
                     row.supplier().getPhone() : "—");
             phoneLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #5f5e5a;");
-            phoneLbl.setMinWidth(widths[1]); phoneLbl.setPrefWidth(widths[1]);
+            phoneLbl.setMinWidth(widths[2]); phoneLbl.setPrefWidth(widths[2]);
 
             Label sectorLbl = new Label(row.supplier().getSector() != null && !row.supplier().getSector().isEmpty() ?
                     row.supplier().getSector() : "—");
             sectorLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #5f5e5a;");
-            sectorLbl.setMinWidth(widths[2]); sectorLbl.setPrefWidth(widths[2]);
+            sectorLbl.setMinWidth(widths[3]); sectorLbl.setPrefWidth(widths[3]);
 
             Label floorLbl = new Label(String.format("%.0f جنيه", row.supplier().getFloorAmount()));
             floorLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
-            floorLbl.setMinWidth(widths[3]); floorLbl.setPrefWidth(widths[3]);
+            floorLbl.setMinWidth(widths[4]); floorLbl.setPrefWidth(widths[4]);
 
             Label typeLbl;
             if (isWarehouse) {
@@ -233,12 +238,12 @@ public class SuppliersContent {
                 typeLbl.setStyle("-fx-font-size: 11px; -fx-padding: 3 10; -fx-background-radius: 4; " +
                         "-fx-background-color: #E6F1FB; -fx-text-fill: #185FA5;");
             }
-            typeLbl.setMinWidth(widths[4]); typeLbl.setPrefWidth(widths[4]);
+            typeLbl.setMinWidth(widths[5]); typeLbl.setPrefWidth(widths[5]);
 
             Button openBtn = new Button("فتح الحساب");
             openBtn.setStyle("-fx-background-color: #3B6D11; -fx-text-fill: white; -fx-font-size: 11px; " +
                     "-fx-padding: 4 10; -fx-background-radius: 4; -fx-cursor: hand;");
-            openBtn.setMinWidth(widths[5]); openBtn.setPrefWidth(widths[5]);
+            openBtn.setMinWidth(widths[6]); openBtn.setPrefWidth(widths[6]);
             final SupplierRow finalRow = row;
             openBtn.setOnAction(e -> {
                 MainLayout.loadContent(SupplierDetailContent.build(userId, username, role, finalRow.supplier()));
@@ -248,14 +253,14 @@ public class SuppliersContent {
             Button editBtn = new Button("تعديل");
             editBtn.setStyle("-fx-background-color: #EAF3DE; -fx-text-fill: #3B6D11; -fx-font-size: 11px; " +
                     "-fx-padding: 4 8; -fx-background-radius: 4; -fx-cursor: hand;");
-            editBtn.setMinWidth(widths[6]); editBtn.setPrefWidth(widths[6]);
+            editBtn.setMinWidth(widths[7]); editBtn.setPrefWidth(widths[7]);
             editBtn.setDisable(!role.equals("admin"));
             editBtn.setOnAction(e -> showEditDialog(userId, username, role, finalRow, rows, table, filter));
 
             Button deleteBtn = new Button("حذف");
             deleteBtn.setStyle("-fx-background-color: #FCEBEB; -fx-text-fill: #A32D2D; -fx-font-size: 11px; " +
                     "-fx-padding: 4 8; -fx-background-radius: 4; -fx-cursor: hand;");
-            deleteBtn.setMinWidth(widths[7]); deleteBtn.setPrefWidth(widths[7]);
+            deleteBtn.setMinWidth(widths[8]); deleteBtn.setPrefWidth(widths[8]);
             deleteBtn.setDisable(!role.equals("admin"));
             deleteBtn.setOnAction(e -> {
                 String msg = isWarehouse
@@ -286,7 +291,7 @@ public class SuppliersContent {
                 });
             });
 
-            r.getChildren().addAll(nameLbl, phoneLbl, sectorLbl, floorLbl, typeLbl, openBtn, editBtn, deleteBtn);
+            r.getChildren().addAll(numLbl, nameLbl, phoneLbl, sectorLbl, floorLbl, typeLbl, openBtn, editBtn, deleteBtn);
             table.getChildren().add(r);
         }
 

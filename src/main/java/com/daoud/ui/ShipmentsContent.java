@@ -59,13 +59,14 @@ public class ShipmentsContent {
     // استعلام واحد بدل استعلام COUNT منفصل لكل مورد (N+1)
     private static List<Supplier> loadNonWarehouseSuppliers() {
         List<Supplier> list = new ArrayList<>();
-        String sql = "SELECT * FROM suppliers WHERE id NOT IN (SELECT supplier_id FROM warehouse_suppliers) ORDER BY name";
+        String sql = "SELECT * FROM suppliers WHERE id NOT IN (SELECT supplier_id FROM warehouse_suppliers) ORDER BY supplier_no NULLS LAST, name";
         try (Connection conn = DatabaseManager_online.getConnection();
              Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 list.add(new Supplier(
                         rs.getInt("id"), rs.getString("name"), rs.getString("phone"),
-                        rs.getString("sector"), rs.getDouble("floor_amount"), rs.getString("floor_date")));
+                        rs.getString("sector"), rs.getDouble("floor_amount"), rs.getString("floor_date"),
+                        rs.getInt("supplier_no")));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
         return list;
@@ -614,7 +615,7 @@ public class ShipmentsContent {
                     row.date(),
                     row.supplier() != null ? row.supplier() : "—",
                     row.factory() != null ? row.factory() : "—",
-                    String.format("%.1f طن", row.net() / 1000.0),
+                    String.format("%.0f كيلو", row.net()),
                     String.format("%.2f ج", row.price()),
                     String.format("%.0f ج", row.total()),
                     String.format("%.0f ج", profit)

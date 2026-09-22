@@ -36,8 +36,8 @@ public class WarehouseDetailContent {
         // ── قائمة الموردين ──
         ListView<Supplier> suppliersList = new ListView<>();
         suppliersList.setPrefHeight(300);
-        suppliersList.setMinHeight(200);
-        suppliersList.setFixedCellSize(35);
+        suppliersList.setMinHeight(220);
+        suppliersList.setFixedCellSize(30);
         suppliersList.setPlaceholder(new Label("جاري تحميل الموردين..."));
         suppliersList.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -478,6 +478,7 @@ public class WarehouseDetailContent {
         suppliersCard.getChildren().addAll(
                 supTitle, suppliersList,
                 new HBox(8, openSupplierBtn, addSupBtn));
+        VBox.setVgrow(suppliersList, Priority.ALWAYS);
 
         HBox mainRow = new HBox(12, entryCard, exitCard);
         HBox.setHgrow(entryCard, Priority.ALWAYS);
@@ -488,6 +489,7 @@ public class WarehouseDetailContent {
         VBox content = new VBox(12, backBtn, stockCard, mainRow, suppliersCard);
         content.setMaxWidth(Double.MAX_VALUE);
         VBox.setVgrow(content, Priority.ALWAYS);
+        VBox.setVgrow(suppliersCard, Priority.ALWAYS);
 
         return content;
     }
@@ -613,9 +615,9 @@ public class WarehouseDetailContent {
 
         HBox statsRow = new HBox(12);
         statsRow.getChildren().addAll(
-                statBox("إجمالي الداخل", String.format("%.1f", data.totalIn() / 1000), "طن"),
-                statBox("إجمالي الخارج", String.format("%.1f", totalOut / 1000), "طن"),
-                statBox("المتبقي", String.format("%.1f", remaining / 1000), "طن")
+                statBox("إجمالي الداخل", String.format("%.0f", data.totalIn()), "كيلو"),
+                statBox("إجمالي الخارج", String.format("%.0f", totalOut), "كيلو"),
+                statBox("المتبقي", String.format("%.0f", remaining), "كيلو")
         );
         statsRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
 

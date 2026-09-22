@@ -15,19 +15,19 @@ import java.util.List;
  */
 public class FloorDAO {
 
-    public record FloorRow(int supplierId, String name, double floorAmount) {}
+    public record FloorRow(int supplierId, String name, double floorAmount, int supplierNo) {}
 
     public record FloorTransaction(int id, String date, String direction, double amount,
                                    String notes, String recordedByName) {}
 
     public static List<FloorRow> getAllFloors() {
         List<FloorRow> list = new ArrayList<>();
-        String sql = "SELECT id, name, floor_amount FROM suppliers ORDER BY name";
+        String sql = "SELECT id, name, floor_amount, supplier_no FROM suppliers ORDER BY supplier_no NULLS LAST, name";
         try (Connection conn = DatabaseManager_online.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                list.add(new FloorRow(rs.getInt("id"), rs.getString("name"), rs.getDouble("floor_amount")));
+                list.add(new FloorRow(rs.getInt("id"), rs.getString("name"), rs.getDouble("floor_amount"), rs.getInt("supplier_no")));
             }
         } catch (SQLException e) {
             System.err.println("FloorDAO error: " + e.getMessage());

@@ -195,11 +195,11 @@ public class WorkerDAO {
         List<Supplier> list = new ArrayList<>();
         System.out.println("DEBUG: getSuppliersByWarehouse called with warehouseId = " + warehouseId);
         String sql = """
-        SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date
+        SELECT s.id, s.name, s.phone, s.sector, s.floor_amount, s.floor_date, s.supplier_no
         FROM suppliers s
         JOIN warehouse_suppliers ws ON s.id = ws.supplier_id
         WHERE ws.warehouse_id = ?
-        ORDER BY s.name
+        ORDER BY s.supplier_no NULLS LAST, s.name
     """;
         try (Connection conn = DatabaseManager_online.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -215,7 +215,8 @@ public class WorkerDAO {
                         rs.getString("phone"),
                         rs.getString("sector"),
                         rs.getDouble("floor_amount"),
-                        rs.getString("floor_date")
+                        rs.getString("floor_date"),
+                        rs.getInt("supplier_no")
                 ));
             }
             System.out.println("DEBUG: Total suppliers found = " + count);

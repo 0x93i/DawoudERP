@@ -16,20 +16,23 @@ import java.util.List;
 
 public class FactoryDetailContent {
 
-    record HistoryRow(String type, int recordId, String date, String netWeight, String pct, String dedKg, String price, String amount, String supplierName) {}
+    record HistoryRow(String type, int recordId, String date, String notes, String supplierName,
+                      String grossWeight, String pct, String dedKg, String price, String amount) {}
 
-    private record FactoryData(double balance, List<HistoryRow> rows) {}
+    private record FactoryData(double balance, double monthlyQty, List<HistoryRow> rows) {}
 
     public static Node build(int userId, String username, String role, Factory factory) {
 
         Label balanceLabel = new Label("جاري التحميل...");
+        Label monthlyQtyLabel = new Label("جاري التحميل...");
+        monthlyQtyLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #185FA5;");
 
         List<HistoryRow> allRows = new ArrayList<>();
         VBox tableBody = new VBox(0);
         tableBody.getChildren().add(new Label("جاري التحميل..."));
-        HBox filtersBox = buildFilters(tableBody, allRows, factory.getId(), balanceLabel);
+        HBox filtersBox = buildFilters(tableBody, allRows, factory.getId(), balanceLabel, monthlyQtyLabel);
 
-        reload(balanceLabel, tableBody, allRows, factory.getId(), null);
+        reload(balanceLabel, monthlyQtyLabel, tableBody, allRows, factory.getId(), null);
 
         // ── شحنة ──
         TextField supplierNameField = new TextField(); supplierNameField.setPromptText("اسم المورد (اختياري)");
@@ -81,7 +84,7 @@ public class FactoryDetailContent {
                             netWeightLabel.setText("الوزن الصافي: —");
                             totalLabel.setText("الإجمالي: —");
                             shipMsg.setText("تم ✓");
-                            reload(balanceLabel, tableBody, allRows, factory.getId(), null);
+                            reload(balanceLabel, monthlyQtyLabel, tableBody, allRows, factory.getId(), null);
                         },
                         error -> shipMsg.setText("خطأ أثناء الحفظ"),
                         saveShipBtn
@@ -119,7 +122,7 @@ public class FactoryDetailContent {
                         () -> {
                             payAmount.clear(); payNotes.clear();
                             payMsg.setText("تم ✓");
-                            reload(balanceLabel, tableBody, allRows, factory.getId(), null);
+                            reload(balanceLabel, monthlyQtyLabel, tableBody, allRows, factory.getId(), null);
                         },
                         error -> payMsg.setText("خطأ أثناء الحفظ"),
                         savePayBtn
@@ -134,7 +137,7 @@ public class FactoryDetailContent {
         });
 
         VBox balanceCard = new VBox(8); balanceCard.getStyleClass().add("card");
-        balanceCard.getChildren().addAll(new Label("المصنع: " + factory.getName()), balanceLabel);
+        balanceCard.getChildren().addAll(new Label("المصنع: " + factory.getName()), balanceLabel, monthlyQtyLabel);
 
         VBox shipCard = new VBox(8); shipCard.getStyleClass().add("card");
         shipCard.getChildren().addAll(
@@ -167,14 +170,14 @@ public class FactoryDetailContent {
         return new VBox(12, backBtn, balanceCard, shipCard, payCard, historyCard);
     }
 
-    private static HBox buildFilters(VBox tableBody, List<HistoryRow> allRows, int factoryId, Label balanceLabel) {
+    private static HBox buildFilters(VBox tableBody, List<HistoryRow> allRows, int factoryId, Label balanceLabel, Label monthlyQtyLabel) {
         Button allBtn = filterBtn("الكل");
         Button shipBtn = filterBtn("شحنات");
         Button payBtn = filterBtn("دفعات");
         setActiveFilter(allBtn, allBtn, shipBtn, payBtn);
-        allBtn.setOnAction(e -> { setActiveFilter(allBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, null, factoryId, balanceLabel); });
-        shipBtn.setOnAction(e -> { setActiveFilter(shipBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, "شحنة", factoryId, balanceLabel); });
-        payBtn.setOnAction(e -> { setActiveFilter(payBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, "دفعة", factoryId, balanceLabel); });
+        allBtn.setOnAction(e -> { setActiveFilter(allBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, null, factoryId, balanceLabel, monthlyQtyLabel); });
+        shipBtn.setOnAction(e -> { setActiveFilter(shipBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, "شحنة", factoryId, balanceLabel, monthlyQtyLabel); });
+        payBtn.setOnAction(e -> { setActiveFilter(payBtn, allBtn, shipBtn, payBtn); renderTable(tableBody, allRows, "دفعة", factoryId, balanceLabel, monthlyQtyLabel); });
         HBox box = new HBox(8, allBtn, shipBtn, payBtn);
         box.setAlignment(Pos.CENTER_RIGHT);
         return box;
@@ -183,8 +186,8 @@ public class FactoryDetailContent {
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"التاريخ", "النوع", "اسم المورد", "الوزن الصافي", "نسبة الخصم", "كمية الخصم", "سعر الكيلو", "المبلغ", ""};
-        double[] widths = {90, 70, 110, 95, 85, 90, 90, 90, 110};
+        String[] cols = {"التاريخ", "النوع", "الملاحظات", "اسم المورد", "الوزن القائم", "نسبة الخصم", "كمية الخصم", "سعر الكيلو", "المبلغ", "", ""};
+        double[] widths = {90, 70, 100, 110, 90, 85, 90, 90, 90, 55, 55};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -194,17 +197,21 @@ public class FactoryDetailContent {
         return header;
     }
 
-    // ── تحميل الرصيد + سجل المعاملات مع بعض في الخلفية ──
-    private static void reload(Label balanceLabel, VBox tableBody, List<HistoryRow> allRows, int factoryId, String filterType) {
+    // ── تحميل الرصيد + كمية الشهر الحالي + سجل المعاملات مع بعض في الخلفية ──
+    private static void reload(Label balanceLabel, Label monthlyQtyLabel, VBox tableBody, List<HistoryRow> allRows, int factoryId, String filterType) {
         AsyncHelper.run(
-                () -> new FactoryData(FactoryDAO.getFactoryBalance(factoryId), loadRows(factoryId)),
+                () -> new FactoryData(FactoryDAO.getFactoryBalance(factoryId), FactoryDAO.getCurrentMonthNetWeight(factoryId), loadRows(factoryId)),
                 data -> {
                     setBalanceText(balanceLabel, data.balance());
+                    setMonthlyQtyText(monthlyQtyLabel, data.monthlyQty());
                     allRows.clear();
                     allRows.addAll(data.rows());
-                    renderTable(tableBody, allRows, filterType, factoryId, balanceLabel);
+                    renderTable(tableBody, allRows, filterType, factoryId, balanceLabel, monthlyQtyLabel);
                 },
-                error -> balanceLabel.setText("حصل خطأ في تحميل البيانات")
+                error -> {
+                    balanceLabel.setText("حصل خطأ في تحميل البيانات");
+                    monthlyQtyLabel.setText("");
+                }
         );
     }
 
@@ -214,10 +221,18 @@ public class FactoryDetailContent {
         lbl.getStyleClass().add(balance >= 0 ? "label-balance-positive" : "label-balance-negative");
     }
 
+    private static void setMonthlyQtyText(Label lbl, double monthlyQty) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        String[] arabicMonths = {"يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"};
+        String monthName = arabicMonths[now.getMonthValue() - 1] + " " + now.getYear();
+        lbl.setText(String.format("الكمية اللي المصنع أخدها الشهر ده (%s): %.1f كيلو", monthName, monthlyQty));
+    }
+
     private static List<HistoryRow> loadRows(int factoryId) {
         List<HistoryRow> rows = new ArrayList<>();
         // شحنات
-        String sql1 = "SELECT id, shipment_date, net_weight, deduction_pct, deduction_kg, price_per_kg, total_amount, COALESCE(supplier_name,'') as supplier_name " +
+        String sql1 = "SELECT id, shipment_date, gross_weight, deduction_pct, deduction_kg, price_per_kg, total_amount, COALESCE(supplier_name,'') as supplier_name " +
                 "FROM factory_shipments WHERE factory_id = ? ORDER BY shipment_date DESC LIMIT 30";
 
         try (Connection conn = DatabaseManager_online.getConnection();
@@ -226,12 +241,13 @@ public class FactoryDetailContent {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 rows.add(new HistoryRow("شحنة", rs.getInt("id"), rs.getString("shipment_date"),
-                        String.format("%.1f كيلو", rs.getDouble("net_weight")),
+                        "—",
+                        rs.getString("supplier_name") != null && !rs.getString("supplier_name").isEmpty() ? rs.getString("supplier_name") : "—",
+                        String.format("%.1f كيلو", rs.getDouble("gross_weight")),
                         String.format("%.1f%%", rs.getDouble("deduction_pct")),
                         String.format("%.1f كيلو", rs.getDouble("deduction_kg")),
                         String.format("%.2f جنيه", rs.getDouble("price_per_kg")),
-                        String.format("%.0f جنيه", rs.getDouble("total_amount")),
-                        rs.getString("supplier_name") != null ? rs.getString("supplier_name") : "—"));
+                        String.format("%.0f جنيه", rs.getDouble("total_amount"))));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
@@ -243,10 +259,11 @@ public class FactoryDetailContent {
             stmt.setInt(1, factoryId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
+                String notes = rs.getString("notes");
                 rows.add(new HistoryRow("دفعة", rs.getInt("id"), rs.getString("payment_date"),
-                        "—", "—", "—", "—",
-                        String.format("%.0f جنيه", rs.getDouble("amount")),
-                        rs.getString("notes") != null ? rs.getString("notes") : ""));
+                        notes != null && !notes.isEmpty() ? notes : "—",
+                        "—", "—", "—", "—", "—",
+                        String.format("%.0f جنيه", rs.getDouble("amount"))));
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
@@ -255,9 +272,10 @@ public class FactoryDetailContent {
     }
 
     private static void renderTable(VBox table, List<HistoryRow> rows, String filterType,
-                                    int factoryId, Label balanceLabel) {
+                                    int factoryId, Label balanceLabel, Label monthlyQtyLabel) {
         table.getChildren().clear();
-        double[] widths = {90, 70, 110, 95, 85, 90, 90, 90, 55, 55};        boolean odd = true, hasRows = false;
+        double[] widths = {90, 70, 100, 110, 90, 85, 90, 90, 90, 55, 55};
+        boolean odd = true, hasRows = false;
 
         for (HistoryRow row : rows) {
             if (filterType != null && !row.type().equals(filterType)) continue;
@@ -279,32 +297,44 @@ public class FactoryDetailContent {
                     (isShip ? "#EAF3DE; -fx-text-fill: #3B6D11" : "#E6F1FB; -fx-text-fill: #185FA5") + ";");
             typeLbl.setMinWidth(widths[1]); typeLbl.setPrefWidth(widths[1]);
 
-            Label netLbl = new Label(row.netWeight());
-            netLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
-            netLbl.setMinWidth(widths[2]); netLbl.setPrefWidth(widths[2]);
+            Label notesLbl = new Label(row.notes());
+            notesLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
+            notesLbl.setMinWidth(widths[2]); notesLbl.setPrefWidth(widths[2]);
+
+            Label supplierLbl = new Label(row.supplierName());
+            supplierLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
+            supplierLbl.setMinWidth(widths[3]); supplierLbl.setPrefWidth(widths[3]);
+
+            Label grossLbl = new Label(row.grossWeight());
+            grossLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
+            grossLbl.setMinWidth(widths[4]); grossLbl.setPrefWidth(widths[4]);
 
             Label pctLbl = new Label(row.pct());
             pctLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
-            pctLbl.setMinWidth(widths[3]); pctLbl.setPrefWidth(widths[3]);
+            pctLbl.setMinWidth(widths[5]); pctLbl.setPrefWidth(widths[5]);
+
+            Label dedKgLbl = new Label(row.dedKg());
+            dedKgLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
+            dedKgLbl.setMinWidth(widths[6]); dedKgLbl.setPrefWidth(widths[6]);
+
+            Label priceLbl = new Label(row.price());
+            priceLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
+            priceLbl.setMinWidth(widths[7]); priceLbl.setPrefWidth(widths[7]);
 
             Label amtLbl = new Label(row.amount());
             amtLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " +
                     (isShip ? "#1a1a18" : "#3B6D11") + ";");
-            amtLbl.setMinWidth(widths[4]); amtLbl.setPrefWidth(widths[4]);
-
-            Label notesLbl = new Label(row.supplierName());
-            notesLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
-            notesLbl.setMinWidth(widths[5]); notesLbl.setPrefWidth(widths[5]);
+            amtLbl.setMinWidth(widths[8]); amtLbl.setPrefWidth(widths[8]);
 
             // زر التعديل
             Button editBtn = new Button("تعديل");
             editBtn.setStyle("-fx-background-color: #EAF3DE; -fx-text-fill: #3B6D11; -fx-font-size: 11px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
-            editBtn.setMinWidth(widths[6]); editBtn.setPrefWidth(widths[6]);
+            editBtn.setMinWidth(widths[9]); editBtn.setPrefWidth(widths[9]);
 
             // زر الحذف
             Button deleteBtn = new Button("حذف");
             deleteBtn.setStyle("-fx-background-color: #FCEBEB; -fx-text-fill: #A32D2D; -fx-font-size: 11px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
-            deleteBtn.setMinWidth(widths[7]); deleteBtn.setPrefWidth(widths[7]);
+            deleteBtn.setMinWidth(widths[10]); deleteBtn.setPrefWidth(widths[10]);
 
             final HistoryRow finalRow = row;
 
@@ -367,7 +397,7 @@ public class FactoryDetailContent {
                                         }
                                     },
                                     () -> {
-                                        reload(balanceLabel, table, rows, factoryId, filterType);
+                                        reload(balanceLabel, monthlyQtyLabel, table, rows, factoryId, filterType);
                                         ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
                                     },
                                     error -> errLbl.setText("خطأ"),
@@ -430,7 +460,7 @@ public class FactoryDetailContent {
                                         }
                                     },
                                     () -> {
-                                        reload(balanceLabel, table, rows, factoryId, filterType);
+                                        reload(balanceLabel, monthlyQtyLabel, table, rows, factoryId, filterType);
                                         ((javafx.stage.Stage) saveEdit.getScene().getWindow()).close();
                                     },
                                     error -> errLbl.setText("خطأ"),
@@ -465,14 +495,14 @@ public class FactoryDetailContent {
                                         stmt.executeUpdate();
                                     }
                                 },
-                                () -> reload(balanceLabel, table, rows, factoryId, filterType),
-                                error -> reload(balanceLabel, table, rows, factoryId, filterType)
+                                () -> reload(balanceLabel, monthlyQtyLabel, table, rows, factoryId, filterType),
+                                error -> reload(balanceLabel, monthlyQtyLabel, table, rows, factoryId, filterType)
                         );
                     }
                 });
             });
 
-            r.getChildren().addAll(dateLbl, typeLbl, netLbl, pctLbl, amtLbl, notesLbl, editBtn, deleteBtn);
+            r.getChildren().addAll(dateLbl, typeLbl, notesLbl, supplierLbl, grossLbl, pctLbl, dedKgLbl, priceLbl, amtLbl, editBtn, deleteBtn);
             table.getChildren().add(r);
         }
 

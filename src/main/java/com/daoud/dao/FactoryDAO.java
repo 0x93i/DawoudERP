@@ -89,6 +89,34 @@ public class FactoryDAO {
         }
     }
 
+    /**
+     * إجمالي الوزن الصافي (كيلو) اللي المصنع أخده من الشحنات المسجلة في الشهر
+     * الحالي بس (بيتحسب لايف من التاريخ، فمع أول يوم في الشهر الجديد بيرجع
+     * يبدأ من صفر تلقائي من غير أي تصفير يدوي أو جدول إضافي).
+     */
+    public static double getCurrentMonthNetWeight(int factoryId) {
+        java.time.LocalDate now = java.time.LocalDate.now();
+        // بنحوّل shipment_date لنص ونقارنه بأول 7 حروف من تاريخ اليوم (yyyy-MM)
+        // — بالظبط زي الشكل اللي التاريخ ظاهر بيه في جدول المعاملات — عشان
+        // نضمن إن أي شحنة ظاهرة هناك في الشهر ده تتحسب هنا، مهما كان نوع
+        // عمود التاريخ في قاعدة البيانات.
+        String yearMonth = String.format("%04d-%02d", now.getYear(), now.getMonthValue());
+        double total = 0;
+        String sql = "SELECT COALESCE(SUM(net_weight), 0) FROM factory_shipments " +
+                "WHERE factory_id = ? AND shipment_date::text LIKE ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, factoryId);
+            stmt.setString(2, yearMonth + "%");
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) total = rs.getDouble(1);
+        } catch (SQLException e) {
+            System.err.println("Error in getCurrentMonthNetWeight: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return total;
+    }
+
     public static double getFactoryBalance(int factoryId) {
         double totalShipments = 0;
         double totalPayments = 0;

@@ -42,17 +42,17 @@ public class DashboardContent {
     }
 
     private static Node buildContent(DashboardData data) {
-        Label totalInLabel = new Label(String.format("%.1f", data.stats().totalIn()));
-        Label totalOutLabel = new Label(String.format("%.1f", data.stats().totalOut()));
-        Label balanceLabel = new Label(String.format("%.1f", data.stats().balance()));
+        Label totalInLabel = new Label(String.format("%.0f", data.stats().totalIn()));
+        Label totalOutLabel = new Label(String.format("%.0f", data.stats().totalOut()));
+        Label balanceLabel = new Label(String.format("%.0f", data.stats().balance()));
         Label factoryDebtLabel = new Label(String.format("%.0f", data.stats().factoryDebt()));
         factoryDebtLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " +
                 (data.stats().factoryDebt() > 0 ? "#3B6D11" : "#A32D2D") + ";");
 
         HBox statsRow = new HBox(12,
-                statCard("إجمالي الداخل (هذا الأسبوع)", totalInLabel, "طن"),
-                statCard("إجمالي الخارج للمصانع", totalOutLabel, "طن"),
-                statCard("رصيد المخازن الحالي", balanceLabel, "طن"),
+                statCard("إجمالي الداخل (هذا الأسبوع)", totalInLabel, "كيلو"),
+                statCard("إجمالي الخارج للمصانع", totalOutLabel, "كيلو"),
+                statCard("رصيد المخازن الحالي", balanceLabel, "كيلو"),
                 statCard("مستحقات من المصانع", factoryDebtLabel, "جنيه")
         );
         statsRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
@@ -157,7 +157,7 @@ public class DashboardContent {
         try (Connection conn = DatabaseManager_online.getConnection()) {
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COALESCE(SUM(total_weight)/1000.0, 0) " +
+                    "SELECT COALESCE(SUM(total_weight), 0) " +
                             "FROM warehouse_stock_entries " +
                             "WHERE entry_date::date >= CURRENT_DATE - INTERVAL '7 days'");
                  ResultSet rs = ps.executeQuery()) {
@@ -165,18 +165,18 @@ public class DashboardContent {
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COALESCE((SUM(weight_green)+SUM(weight_colored)+SUM(weight_white)+SUM(weight_waste))/1000.0, 0) FROM warehouse_stock_exits");
+                    "SELECT COALESCE((SUM(weight_green)+SUM(weight_colored)+SUM(weight_white)+SUM(weight_waste)), 0) FROM warehouse_stock_exits");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) totalOut = rs.getDouble(1);
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COALESCE(SUM(total_weight)/1000.0, 0) FROM warehouse_stock_entries");
+                    "SELECT COALESCE(SUM(total_weight), 0) FROM warehouse_stock_entries");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) in = rs.getDouble(1);
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COALESCE((SUM(weight_green)+SUM(weight_colored)+SUM(weight_white)+SUM(weight_waste))/1000.0, 0) FROM warehouse_stock_exits");
+                    "SELECT COALESCE((SUM(weight_green)+SUM(weight_colored)+SUM(weight_white)+SUM(weight_waste)), 0) FROM warehouse_stock_exits");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) out = rs.getDouble(1);
             }

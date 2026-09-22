@@ -11,7 +11,8 @@ public class SupplierDAO {
 
     public static List<Supplier> getAllSuppliers() {
         List<Supplier> list = new ArrayList<>();
-        String sql = "SELECT * FROM suppliers ORDER BY name";
+        // الترتيب برقم المورد (الأهم) وبعدين بالاسم لأي حد لسه من غير رقم
+        String sql = "SELECT * FROM suppliers ORDER BY supplier_no NULLS LAST, name";
         try (Connection conn = DatabaseManager_online.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -22,7 +23,8 @@ public class SupplierDAO {
                         rs.getString("phone"),
                         rs.getString("sector"),
                         rs.getDouble("floor_amount"),
-                        rs.getString("floor_date")
+                        rs.getString("floor_date"),
+                        rs.getInt("supplier_no")
                 ));
             }
         } catch (SQLException e) {
@@ -31,16 +33,44 @@ public class SupplierDAO {
         return list;
     }
 
-    public static void addSupplier(String name, String phone, String sector, double floorAmount, int createdBy) {
-        String sql = "INSERT INTO suppliers (name, phone, sector, floor_amount, floor_date, created_by) VALUES (?, ?, ?, ?, date('now'), ?)";
+    /** بيرجع أول رقم متاح للمورد الجديد (أكبر رقم موجود + 1، أو 1 لو مفيش حد لسه). */
+    public static int getNextSupplierNo() throws SQLException {
+        String sql = "SELECT COALESCE(MAX(supplier_no), 0) + 1 FROM suppliers";
         try (Connection conn = DatabaseManager_online.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, name);
-            stmt.setString(2, phone);
-            stmt.setString(3, sector);
-            stmt.setDouble(4, floorAmount);
-            stmt.setInt(5, createdBy);
-            stmt.executeUpdate();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 1;
+    }
+
+    public static void addSupplier(String name, String phone, String sector, double floorAmount, int createdBy) {
+        String sql = "INSERT INTO suppliers (name, phone, sector, floor_amount, floor_date, created_by, supplier_no) VALUES (?, ?, ?, ?, date('now'), ?, ?)";
+        try (Connection conn = DatabaseManager_online.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int nextNo;
+                // بنحسب الرقم الجديد جوه نفس الترانزاكشن عشان نقفل السباق بين طلبين إضافة في نفس اللحظة
+                try (Statement s = conn.createStatement();
+                     ResultSet rs = s.executeQuery("SELECT COALESCE(MAX(supplier_no), 0) + 1 FROM suppliers")) {
+                    nextNo = rs.next() ? rs.getInt(1) : 1;
+                }
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, name);
+                    stmt.setString(2, phone);
+                    stmt.setString(3, sector);
+                    stmt.setDouble(4, floorAmount);
+                    stmt.setInt(5, createdBy);
+                    stmt.setInt(6, nextNo);
+                    stmt.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             System.err.println("Error: " + e.getMessage());
         }

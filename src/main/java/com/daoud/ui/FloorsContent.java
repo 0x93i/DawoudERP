@@ -32,8 +32,8 @@ public class FloorsContent {
     private static HBox buildHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10; -fx-background-radius: 6;");
-        String[] cols = {"المورد", "رصيد الأرضية", ""};
-        double[] widths = {260, 150, 100};
+        String[] cols = {"رقم", "المورد", "رصيد الأرضية", ""};
+        double[] widths = {50, 260, 150, 100};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -60,6 +60,10 @@ public class FloorsContent {
                     "; -fx-padding: 9 10; -fx-border-color: transparent transparent #f0f0f0 transparent;");
             odd = !odd;
 
+            Label numLbl = new Label(f.supplierNo() > 0 ? String.valueOf(f.supplierNo()) : "—");
+            numLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #5f5e5a;");
+            numLbl.setMinWidth(50); numLbl.setPrefWidth(50);
+
             Label nameLbl = new Label(f.name());
             nameLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #1a1a18;");
             nameLbl.setMinWidth(260); nameLbl.setPrefWidth(260);
@@ -77,7 +81,7 @@ public class FloorsContent {
                 MainLayout.setTitle("أرضية: " + f.name());
             });
 
-            row.getChildren().addAll(nameLbl, amountLbl, openBtn);
+            row.getChildren().addAll(numLbl, nameLbl, amountLbl, openBtn);
             table.getChildren().add(row);
         }
     }

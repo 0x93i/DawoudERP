@@ -244,7 +244,11 @@ public class SupplierDetailContent {
 
         // ── Cards ──
         VBox infoCard = new VBox(6); infoCard.getStyleClass().add("card");
-        infoCard.getChildren().addAll(new Label("المورد: " + supplier.getName()), phoneLabel, floorLabel, balanceLabel);
+        String titleTxt = "المورد: " + supplier.getName() +
+                (supplier.getSupplierNo() > 0 ? "   (رقم " + supplier.getSupplierNo() + ")" : "");
+        Label nameTitle = new Label(titleTxt);
+        nameTitle.getStyleClass().add("card-title");
+        infoCard.getChildren().addAll(nameTitle, phoneLabel, floorLabel, balanceLabel);
 
         VBox purchaseCard = new VBox(8); purchaseCard.getStyleClass().add("card");
         Label purchTitle = new Label("تسجيل بضاعة"); purchTitle.getStyleClass().add("card-title");
