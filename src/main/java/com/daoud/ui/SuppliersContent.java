@@ -124,7 +124,6 @@ public class SuppliersContent {
         return new VBox(12, card);
     }
 
-
     private static void loadSupplierRows(List<SupplierRow> rows, int userId, String role) {
         rows.clear();
         if (role.equals("admin")) {
@@ -171,24 +170,11 @@ public class SuppliersContent {
         return rows;
     }
 
-    private static String getSupplierWarehouseName(int supplierId) {
-        String sql = "SELECT w.name FROM warehouses w " +
-                "JOIN warehouse_suppliers ws ON w.id = ws.warehouse_id " +
-                "WHERE ws.supplier_id = ? LIMIT 1";
-        try (Connection conn = DatabaseManager_online.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, supplierId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) return rs.getString("name");
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
-        return null;
-    }
-
     private static HBox buildTableHeader() {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"اسم المورد", "التليفون", "القطاع", "الأرضية", "النوع", ""};
-        double[] widths = {160, 120, 120, 100, 140, 120};
+        String[] cols = {"اسم المورد", "التليفون", "القطاع", "الأرضية", "النوع", "", "", ""};
+        double[] widths = {150, 110, 110, 90, 130, 110, 70, 70};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
             lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #888780;");
@@ -201,7 +187,7 @@ public class SuppliersContent {
     private static void renderTable(VBox table, List<SupplierRow> rows, String filter,
                                     int userId, String username, String role) {
         table.getChildren().clear();
-        double[] widths = {160, 120, 120, 100, 140, 120};
+        double[] widths = {150, 110, 110, 90, 130, 110, 70, 70};
         boolean odd = true, hasRows = false;
 
         for (SupplierRow row : rows) {
@@ -259,7 +245,48 @@ public class SuppliersContent {
                 MainLayout.setTitle("حساب: " + finalRow.supplier().getName());
             });
 
-            r.getChildren().addAll(nameLbl, phoneLbl, sectorLbl, floorLbl, typeLbl, openBtn);
+            Button editBtn = new Button("تعديل");
+            editBtn.setStyle("-fx-background-color: #EAF3DE; -fx-text-fill: #3B6D11; -fx-font-size: 11px; " +
+                    "-fx-padding: 4 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            editBtn.setMinWidth(widths[6]); editBtn.setPrefWidth(widths[6]);
+            editBtn.setDisable(!role.equals("admin"));
+            editBtn.setOnAction(e -> showEditDialog(userId, username, role, finalRow, rows, table, filter));
+
+            Button deleteBtn = new Button("حذف");
+            deleteBtn.setStyle("-fx-background-color: #FCEBEB; -fx-text-fill: #A32D2D; -fx-font-size: 11px; " +
+                    "-fx-padding: 4 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            deleteBtn.setMinWidth(widths[7]); deleteBtn.setPrefWidth(widths[7]);
+            deleteBtn.setDisable(!role.equals("admin"));
+            deleteBtn.setOnAction(e -> {
+                String msg = isWarehouse
+                        ? "هتحذف \"" + finalRow.supplier().getName() + "\" نهائيًا وهيتشال من مخزن \"" + finalRow.warehouseName() + "\"؟"
+                        : "هتحذف \"" + finalRow.supplier().getName() + "\" نهائيًا؟ سجلات الشحنات بتاعته هتفضل موجودة.";
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, msg);
+                confirm.showAndWait().ifPresent(res -> {
+                    if (res == ButtonType.OK) {
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.run(
+                                () -> {
+                                    SupplierDAO.deleteSupplierFully(finalRow.supplier().getId());
+                                    List<SupplierRow> freshRows = new ArrayList<>();
+                                    loadSupplierRows(freshRows, userId, role);
+                                    return freshRows;
+                                },
+                                freshRows -> {
+                                    rows.clear();
+                                    rows.addAll(freshRows);
+                                    renderTable(table, rows, filter, userId, username, role);
+                                },
+                                error -> {
+                                    deleteBtn.setDisable(false);
+                                    new Alert(Alert.AlertType.ERROR, "حصل خطأ أثناء الحذف").showAndWait();
+                                }
+                        );
+                    }
+                });
+            });
+
+            r.getChildren().addAll(nameLbl, phoneLbl, sectorLbl, floorLbl, typeLbl, openBtn, editBtn, deleteBtn);
             table.getChildren().add(r);
         }
 
@@ -345,6 +372,95 @@ public class SuppliersContent {
                     error -> {
                         errorLbl.setStyle("-fx-text-fill: #b91c1c;");
                         errorLbl.setText("حصل خطأ أثناء الحفظ، حاول تاني");
+                    },
+                    saveBtn
+            );
+        });
+
+        dialog.show();
+    }
+
+    private static void showEditDialog(int userId, String username, String role, SupplierRow row,
+                                       List<SupplierRow> allRows, VBox tableBody, String filter) {
+        Supplier supplier = row.supplier();
+
+        TextField nameField = new TextField(supplier.getName());
+        TextField phoneField = new TextField(supplier.getPhone() != null ? supplier.getPhone() : "");
+        TextField sectorField = new TextField(supplier.getSector() != null ? supplier.getSector() : "");
+
+        ComboBox<String> warehouseCombo = new ComboBox<>();
+        warehouseCombo.getItems().add("مورد عام (بدون مخزن)");
+        warehouseCombo.setMaxWidth(Double.MAX_VALUE);
+        warehouseCombo.setDisable(true);
+        warehouseCombo.setPromptText("جاري تحميل المخازن...");
+
+        Button saveBtn = new Button("حفظ"); saveBtn.getStyleClass().add("btn-primary");
+        Label errorLbl = new Label("");
+
+        VBox layout = new VBox(10,
+                new Label("الاسم:"), nameField,
+                new Label("التليفون:"), phoneField,
+                new Label("القطاع:"), sectorField,
+                new Label("المخزن:"), warehouseCombo,
+                saveBtn, errorLbl);
+        layout.setPadding(new Insets(20));
+        Stage dialog = DialogHelper.create("تعديل مورد", layout, 360, 400);
+
+        // تحميل المخازن + المخزن الحالي بتاع المورد في الخلفية
+        AsyncHelper.run(
+                () -> new Object[]{WarehouseDAO.getAllWarehouses(), WarehouseDAO.getWarehouseBySupplier(supplier.getId())},
+                result -> {
+                    @SuppressWarnings("unchecked")
+                    List<Warehouse> warehouses = (List<Warehouse>) result[0];
+                    int currentWarehouseId = (int) result[1];
+                    for (Warehouse w : warehouses) warehouseCombo.getItems().add(w.getId() + "|" + w.getName());
+                    warehouseCombo.setValue("مورد عام (بدون مخزن)");
+                    if (currentWarehouseId != -1) {
+                        for (String item : warehouseCombo.getItems()) {
+                            if (item.startsWith(currentWarehouseId + "|")) { warehouseCombo.setValue(item); break; }
+                        }
+                    }
+                    warehouseCombo.setDisable(false);
+                },
+                error -> warehouseCombo.setPromptText("حصل خطأ في تحميل المخازن")
+        );
+
+        saveBtn.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            if (name.isEmpty()) { errorLbl.setText("الاسم مطلوب"); return; }
+            String phone = phoneField.getText().trim();
+            String sector = sectorField.getText().trim();
+            String selected = warehouseCombo.getValue();
+
+            errorLbl.setStyle("-fx-text-fill: #5f5e5a;");
+            errorLbl.setText("جاري الحفظ...");
+
+            AsyncHelper.run(
+                    () -> {
+                        SupplierDAO.updateSupplier(supplier.getId(), name, phone, sector);
+
+                        int currentWarehouseId = WarehouseDAO.getWarehouseBySupplier(supplier.getId());
+                        if (currentWarehouseId != -1) {
+                            WarehouseDAO.removeSupplierFromWarehouse(currentWarehouseId, supplier.getId());
+                        }
+                        if (selected != null && selected.contains("|")) {
+                            int newWarehouseId = Integer.parseInt(selected.split("\\|")[0]);
+                            WarehouseDAO.assignSupplierToWarehouse(newWarehouseId, supplier.getId());
+                        }
+
+                        List<SupplierRow> freshRows = new ArrayList<>();
+                        loadSupplierRows(freshRows, userId, role);
+                        return freshRows;
+                    },
+                    freshRows -> {
+                        allRows.clear();
+                        allRows.addAll(freshRows);
+                        renderTable(tableBody, allRows, filter, userId, username, role);
+                        dialog.close();
+                    },
+                    error -> {
+                        errorLbl.setStyle("-fx-text-fill: #b91c1c;");
+                        errorLbl.setText("حصل خطأ أثناء الحفظ");
                     },
                     saveBtn
             );

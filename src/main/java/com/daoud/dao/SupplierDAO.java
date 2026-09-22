@@ -57,6 +57,57 @@ public class SupplierDAO {
         }
     }
 
+    public static void updateSupplier(int id, String name, String phone, String sector) throws SQLException {
+        String sql = "UPDATE suppliers SET name = ?, phone = ?, sector = ? WHERE id = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setString(2, phone);
+            stmt.setString(3, sector);
+            stmt.setInt(4, id);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * حذف مورد بالكامل: بيتشال من أي مخزن مرتبط بيه، وبيتشال كل بيانات حسابه
+     * (بضاعة/سحوبات/تسويات/أرضية)، لكن سجلات الشحنات (shipments/shipment_suppliers)
+     * بتفضل زي ما هي — لو الفورين كي على suppliers.id متظبط على ON DELETE SET NULL
+     * هيبقى اسم المورد يبقى فاضي في الشحنة القديمة من غير ما تتمسح الشحنة نفسها.
+     */
+    public static void deleteSupplierFully(int supplierId) throws SQLException {
+        try (Connection conn = DatabaseManager_online.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String[] cleanupSql = {
+                        "DELETE FROM warehouse_suppliers WHERE supplier_id = ?",
+                        "DELETE FROM supplier_transactions WHERE supplier_id = ?",
+                        "DELETE FROM supplier_withdrawals WHERE supplier_id = ?",
+                        "DELETE FROM supplier_floor_transactions WHERE supplier_id = ?",
+                        "DELETE FROM supplier_settlements WHERE supplier_id = ?"
+                };
+                for (String sql : cleanupSql) {
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setInt(1, supplierId);
+                        stmt.executeUpdate();
+                    } catch (SQLException ignored) {
+                        // لو الجدول ده مش موجود عند بعض النسخ، تجاهل واكمل
+                    }
+                }
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM suppliers WHERE id = ?")) {
+                    del.setInt(1, supplierId);
+                    del.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
     public static double getSupplierBalance(int supplierId) {
         double floor = 0;
         double totalPurchases = 0;

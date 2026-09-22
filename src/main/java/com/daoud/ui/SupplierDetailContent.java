@@ -105,7 +105,7 @@ public class SupplierDetailContent {
         TextField withdrawField = new TextField(); withdrawField.setPromptText("المبلغ");
         TextField withdrawNotes = new TextField(); withdrawNotes.setPromptText("ملاحظة (اختياري)");
         ComboBox<String> paymentMethodCombo = new ComboBox<>(
-                FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي"));
+                FXCollections.observableArrayList("كاش", "فيزا", "محفظة", "شيك", "تحويل بنكي", "من رصيد الأرضية"));
         paymentMethodCombo.setValue("كاش");
         Button saveWithdrawBtn = new Button("تسجيل السحب"); saveWithdrawBtn.getStyleClass().add("btn-default");
         Label withdrawError = new Label("");
@@ -115,10 +115,19 @@ public class SupplierDetailContent {
                 double amount = Double.parseDouble(withdrawField.getText().trim());
                 String method = paymentMethodCombo.getValue();
                 String notes = withdrawNotes.getText().trim();
+                boolean fromFloor = "من رصيد الأرضية".equals(method);
 
-                withdrawError.setText("جاري التحقق...");
+                withdrawError.setText(fromFloor ? "جاري الحفظ..." : "جاري التحقق...");
                 AsyncHelper.run(
                         () -> {
+                            if (fromFloor) {
+                                // سحب من رصيد الأرضية: حساب مستقل عن حساب الشغل، مفيش أي حركة خزنة
+                                // ومسموح إن الرصيد يبقى سالب لو المبلغ أكبر من المتاح
+                                com.daoud.dao.FloorDAO.adjust(supplier.getId(), "out", amount, notes, userId);
+                                double newFloor = com.daoud.dao.FloorDAO.getFloorAmount(supplier.getId());
+                                return "OK:" + newFloor;
+                            }
+
                             // تحديد الخزنة
                             int warehouseId = com.daoud.dao.WarehouseDAO.getWarehouseBySupplier(supplier.getId());
                             int treasuryId = (warehouseId == -1)
@@ -155,6 +164,10 @@ public class SupplierDetailContent {
                             }
                             withdrawField.clear(); withdrawNotes.clear();
                             withdrawError.setText("تم ✓");
+                            if (result.startsWith("OK:")) {
+                                double newFloor = Double.parseDouble(result.substring("OK:".length()));
+                                floorLabel.setText(String.format("الأرضية: %.0f جنيه", newFloor));
+                            }
                             reload(balanceLabel, tableBody, allRows, supplier.getId(), null);
                         },
                         error -> withdrawError.setText("خطأ أثناء الحفظ"),
@@ -280,11 +293,13 @@ public class SupplierDetailContent {
         Button allBtn = filterBtn("الكل");
         Button tradeBtn = filterBtn("بضاعة");
         Button withdrawBtn = filterBtn("سحب");
-        setActive(allBtn, allBtn, tradeBtn, withdrawBtn);
-        allBtn.setOnAction(e -> { setActive(allBtn, allBtn, tradeBtn, withdrawBtn); renderTable(tableBody, allRows, null, supplierId, balanceLabel); });
-        tradeBtn.setOnAction(e -> { setActive(tradeBtn, allBtn, tradeBtn, withdrawBtn); renderTable(tableBody, allRows, "بضاعة", supplierId, balanceLabel); });
-        withdrawBtn.setOnAction(e -> { setActive(withdrawBtn, allBtn, tradeBtn, withdrawBtn); renderTable(tableBody, allRows, "سحب", supplierId, balanceLabel); });
-        HBox box = new HBox(8, allBtn, tradeBtn, withdrawBtn);
+        Button floorBtn = filterBtn("من الأرضية");
+        setActive(allBtn, allBtn, tradeBtn, withdrawBtn, floorBtn);
+        allBtn.setOnAction(e -> { setActive(allBtn, allBtn, tradeBtn, withdrawBtn, floorBtn); renderTable(tableBody, allRows, null, supplierId, balanceLabel); });
+        tradeBtn.setOnAction(e -> { setActive(tradeBtn, allBtn, tradeBtn, withdrawBtn, floorBtn); renderTable(tableBody, allRows, "بضاعة", supplierId, balanceLabel); });
+        withdrawBtn.setOnAction(e -> { setActive(withdrawBtn, allBtn, tradeBtn, withdrawBtn, floorBtn); renderTable(tableBody, allRows, "سحب", supplierId, balanceLabel); });
+        floorBtn.setOnAction(e -> { setActive(floorBtn, allBtn, tradeBtn, withdrawBtn, floorBtn); renderTable(tableBody, allRows, "أرضية", supplierId, balanceLabel); });
+        HBox box = new HBox(8, allBtn, tradeBtn, withdrawBtn, floorBtn);
         box.setAlignment(Pos.CENTER_RIGHT);
         return box;
     }
@@ -360,6 +375,14 @@ public class SupplierDetailContent {
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
+        // سحوبات "من رصيد الأرضية" — بتظهر هنا للعرض بس، ومش داخلة في حساب الرصيد فوق
+        for (com.daoud.dao.FloorDAO.FloorTransaction ft : com.daoud.dao.FloorDAO.getHistory(supplierId)) {
+            if (!ft.direction().equals("out")) continue;
+            rows.add(new HistoryRow("أرضية", ft.id(), ft.date(),
+                    "—", String.format("%.0f جنيه", ft.amount()),
+                    "—", "من الأرضية", ft.notes()));
+        }
+
         rows.sort((a, b) -> b.date().compareTo(a.date()));
         return rows;
     }
@@ -422,6 +445,12 @@ public class SupplierDetailContent {
             deleteBtn.setMinWidth(widths[8]); deleteBtn.setPrefWidth(widths[8]);
 
             final HistoryRow finalRow = row;
+
+            // سحوبات الأرضية بتتعدل من شاشة "الأرضيات" نفسها بس، مش من هنا
+            if (finalRow.type().equals("أرضية")) {
+                editBtn.setDisable(true); editBtn.setOpacity(0.35);
+                deleteBtn.setDisable(true); deleteBtn.setOpacity(0.35);
+            }
 
             // ── التعديل ──
             editBtn.setOnAction(e -> {
