@@ -47,6 +47,35 @@ public class WarehouseDAO {
         }
     }
 
+    /**
+     * بتغيّر مسؤول المخزن لمستخدم تاني (بتستبدل أي مسؤول حالي). بتستخدم
+     * لما عم داود يضيف مستخدم جديد كـ"مسؤول مخزن" ويحدد مخزن موجود يبقى
+     * مسؤول عنه، أو لما يحب يغيّر مسؤول مخزن قائم.
+     */
+    public static void updateWarehouseManager(int warehouseId, int managerUserId) {
+        String sql = "UPDATE warehouses SET manager_user_id = ? WHERE id = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, managerUserId);
+            stmt.setInt(2, warehouseId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+
+    /** بتشيل مسؤول المخزن الحالي (لو هو انتقل لمخزن تاني أو بقى أدمن). */
+    public static void clearWarehouseManager(int warehouseId) {
+        String sql = "UPDATE warehouses SET manager_user_id = NULL WHERE id = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, warehouseId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+
     public static void deleteWarehouse(int id) {
         // حذف الخزنة المرتبطة
         String deleteVault = "DELETE FROM vaults WHERE owner_type = 'warehouse' AND owner_id = ?";
@@ -205,6 +234,62 @@ public class WarehouseDAO {
             System.err.println("Error: " + e.getMessage());
         }
         return list;
+    }
+
+    /**
+     * تسجيل نقل بضاعة من مخزن لمخزن تاني (مثلاً مخزن شكري بيودي لمخزن محمد).
+     * بيتسجل في جدول warehouse_transfers المستقل عشان النقل الداخلي ده مالوش
+     * مورد حقيقي يتسجل بيه زي warehouse_stock_entries العادي.
+     */
+    public static void recordWarehouseTransfer(int fromWarehouseId, int toWarehouseId,
+                                               double green, double colored, double white, double waste,
+                                               double pricePerKg, double purchaseTotal,
+                                               double costLoading, double costWorkers, double costFuel, double costTransport, double costOther,
+                                               int recordedBy) {
+        double totalCost = costLoading + costWorkers + costFuel + costTransport + costOther;
+        double landedTotal = purchaseTotal + totalCost;
+        String sql = "INSERT INTO warehouse_transfers " +
+                "(from_warehouse_id, to_warehouse_id, weight_green, weight_colored, weight_white, weight_waste, " +
+                "price_per_kg, purchase_total, cost_loading, cost_workers, cost_fuel, cost_transport, cost_other, " +
+                "total_cost, landed_total, recorded_by) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, fromWarehouseId);
+            stmt.setInt(2, toWarehouseId);
+            stmt.setDouble(3, green);
+            stmt.setDouble(4, colored);
+            stmt.setDouble(5, white);
+            stmt.setDouble(6, waste);
+            stmt.setDouble(7, pricePerKg);
+            stmt.setDouble(8, purchaseTotal);
+            stmt.setDouble(9, costLoading);
+            stmt.setDouble(10, costWorkers);
+            stmt.setDouble(11, costFuel);
+            stmt.setDouble(12, costTransport);
+            stmt.setDouble(13, costOther);
+            stmt.setDouble(14, totalCost);
+            stmt.setDouble(15, landedTotal);
+            stmt.setInt(16, recordedBy);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+
+    /** إجمالي الوزن الداخل للمخزن ده عن طريق تحويلات من مخازن تانية. */
+    public static double getIncomingTransfersWeight(int warehouseId) {
+        String sql = "SELECT COALESCE(SUM(weight_green + weight_colored + weight_white + weight_waste), 0) AS total " +
+                "FROM warehouse_transfers WHERE to_warehouse_id = ?";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, warehouseId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getDouble("total");
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return 0;
     }
 
     public static int getWarehouseBySupplier(int supplierId) {

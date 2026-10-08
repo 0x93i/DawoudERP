@@ -43,6 +43,35 @@ public class SupplierDAO {
         return list;
     }
 
+    /**
+     * الموردين "العامين" بس — اللي مش مرتبطين بأي مخزن. دول اللي المفروض
+     * يظهروا في خزنة عم داود الرئيسية؛ الموردين المرتبطين بمخزن (الموردين
+     * الصغيرين) بيظهروا في خزنة المخزن بتاعهم بس.
+     */
+    public static List<Supplier> getGeneralSuppliers() {
+        List<Supplier> list = new ArrayList<>();
+        String sql = "SELECT * FROM suppliers WHERE id NOT IN (SELECT supplier_id FROM warehouse_suppliers) " +
+                "ORDER BY supplier_no NULLS LAST, name";
+        try (Connection conn = DatabaseManager_online.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(new Supplier(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("phone"),
+                        rs.getString("sector"),
+                        rs.getDouble("floor_amount"),
+                        rs.getString("floor_date"),
+                        rs.getInt("supplier_no")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return list;
+    }
+
     public static List<Supplier> getAllSuppliers() {
         List<Supplier> list = new ArrayList<>();
         // الترتيب برقم المورد (الأهم) وبعدين بالاسم لأي حد لسه من غير رقم

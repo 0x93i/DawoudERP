@@ -179,6 +179,7 @@ public class WarehouseDetailContent {
 
         // بتتحمل في الخلفية وتتضاف لنفس القايمة دي لما تجهز (القايمة نفسها بتتلمس من داخل الأكشن بعدين)
         List<com.daoud.model.Factory> factories = new ArrayList<>();
+        List<Warehouse> otherWarehouses = new ArrayList<>();
         ComboBox<String> destinationCombo = new ComboBox<>();
         destinationCombo.getItems().add("عم داود");
         destinationCombo.setPromptText("اختار الوجهة");
@@ -189,6 +190,18 @@ public class WarehouseDetailContent {
                 loaded -> {
                     factories.addAll(loaded);
                     for (com.daoud.model.Factory f : loaded) destinationCombo.getItems().add("مصنع: " + f.getName());
+                }
+        );
+
+        AsyncHelper.run(
+                WarehouseDAO::getAllWarehouses,
+                loaded -> {
+                    for (Warehouse w : loaded) {
+                        if (w.getId() != warehouse.getId()) {
+                            otherWarehouses.add(w);
+                            destinationCombo.getItems().add("مخزن: " + w.getName());
+                        }
+                    }
                 }
         );
 
@@ -369,6 +382,109 @@ public class WarehouseDetailContent {
                     scroll.setFitToWidth(true);
                     VBox dialogBox = new VBox(scroll);
                     DialogHelper.create("بيانات الشحنة: " + finalFactory.getName(), dialogBox, 420, 380).show();
+                    return;
+                }
+
+                // لو مخزن تاني — افتح dialog للتكاليف وسجّل خروج من هنا ودخول هناك
+                if (destination.startsWith("مخزن: ")) {
+                    String targetName = destination.replace("مخزن: ", "");
+                    Warehouse targetWarehouse = null;
+                    for (Warehouse w : otherWarehouses) {
+                        if (w.getName().equals(targetName)) { targetWarehouse = w; break; }
+                    }
+                    if (targetWarehouse == null) { exitMsg.setText("المخزن مش موجود"); return; }
+
+                    final Warehouse finalTarget = targetWarehouse;
+                    final double purchaseTotal = totalKg * exitPrice;
+
+                    TextField costLoading = new TextField("0"); costLoading.setPromptText("تحميل");
+                    TextField costWorkers = new TextField("0"); costWorkers.setPromptText("عمال");
+                    TextField costFuel = new TextField("0"); costFuel.setPromptText("بنزين");
+                    TextField costTransport = new TextField("0"); costTransport.setPromptText("نقل");
+                    TextField costOther = new TextField("0"); costOther.setPromptText("أخرى");
+
+                    Label landedLabel = new Label("إجمالي التكلفة بعد النقل: —");
+                    landedLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11;");
+
+                    Runnable calcTransfer = () -> {
+                        double totalCost = parseField(costLoading) + parseField(costWorkers) + parseField(costFuel)
+                                + parseField(costTransport) + parseField(costOther);
+                        landedLabel.setText(String.format("إجمالي التكلفة بعد النقل: %.2f جنيه", purchaseTotal + totalCost));
+                    };
+                    costLoading.textProperty().addListener((o,old,n) -> calcTransfer.run());
+                    costWorkers.textProperty().addListener((o,old,n) -> calcTransfer.run());
+                    costFuel.textProperty().addListener((o,old,n) -> calcTransfer.run());
+                    costTransport.textProperty().addListener((o,old,n) -> calcTransfer.run());
+                    costOther.textProperty().addListener((o,old,n) -> calcTransfer.run());
+                    calcTransfer.run();
+
+                    Button saveTransferBtn = new Button("حفظ النقل"); saveTransferBtn.getStyleClass().add("btn-primary");
+                    Label transferErr = new Label("");
+
+                    saveTransferBtn.setOnAction(ev -> {
+                        double cLoading = parseField(costLoading), cWorkers = parseField(costWorkers);
+                        double cFuel = parseField(costFuel), cTransport = parseField(costTransport);
+                        double cOther = parseField(costOther);
+
+                        transferErr.setText("جاري الحفظ...");
+
+                        AsyncHelper.runVoid(
+                                () -> {
+                                    // تسجيل الخروج من المخزن الحالي
+                                    String exitSql = "INSERT INTO warehouse_stock_exits " +
+                                            "(warehouse_id, exit_date, weight_green, weight_colored, weight_white, weight_waste, destination, exit_price, exit_value, recorded_by) " +
+                                            "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                    try (Connection conn = DatabaseManager_online.getConnection();
+                                         PreparedStatement stmt = conn.prepareStatement(exitSql)) {
+                                        stmt.setInt(1, warehouse.getId());
+                                        stmt.setDouble(2, green); stmt.setDouble(3, colored);
+                                        stmt.setDouble(4, white); stmt.setDouble(5, waste);
+                                        stmt.setString(6, destination);
+                                        stmt.setDouble(7, exitPrice);
+                                        stmt.setDouble(8, purchaseTotal);
+                                        stmt.setInt(9, userId);
+                                        stmt.executeUpdate();
+                                    }
+
+                                    // تسجيل النقل والدخول للمخزن التاني
+                                    WarehouseDAO.recordWarehouseTransfer(warehouse.getId(), finalTarget.getId(),
+                                            green, colored, white, waste, exitPrice, purchaseTotal,
+                                            cLoading, cWorkers, cFuel, cTransport, cOther, userId);
+                                },
+                                () -> {
+                                    exitGreenField.clear(); exitColoredField.clear();
+                                    exitWhiteField.clear(); exitWasteField.clear(); exitPriceField.clear();
+                                    exitTotalLabel.setText("الإجمالي: —");
+                                    exitValueLabel.setText("قيمة الشراء: —");
+                                    exitMsg.setText("تم تسجيل النقل ✓");
+                                    refreshStockCard(stockCard, warehouse.getId());
+                                    ((Stage) saveTransferBtn.getScene().getWindow()).close();
+                                },
+                                error -> transferErr.setText("خطأ: " + (error != null ? error.getMessage() : "")),
+                                saveTransferBtn
+                        );
+                    });
+
+                    VBox transferLayout = new VBox(10,
+                            new Label("--- نقل بضاعة إلى مخزن: " + finalTarget.getName() + " ---"),
+                            new Label(String.format("الوزن: %.1f كيلو — سعر الكيلو: %.2f — قيمة الشراء: %.2f جنيه",
+                                    totalKg, exitPrice, purchaseTotal)),
+                            new Separator(),
+                            new Label("تكاليف النقل:"),
+                            new HBox(8,
+                                    new VBox(4, new Label("تحميل:"), costLoading),
+                                    new VBox(4, new Label("عمال:"), costWorkers),
+                                    new VBox(4, new Label("بنزين:"), costFuel)),
+                            new HBox(8,
+                                    new VBox(4, new Label("نقل:"), costTransport),
+                                    new VBox(4, new Label("أخرى:"), costOther)),
+                            landedLabel,
+                            saveTransferBtn, transferErr);
+                    transferLayout.setPadding(new Insets(20));
+                    ScrollPane transferScroll = new ScrollPane(transferLayout);
+                    transferScroll.setFitToWidth(true);
+                    VBox transferDialogBox = new VBox(transferScroll);
+                    DialogHelper.create("نقل بضاعة: " + finalTarget.getName(), transferDialogBox, 420, 380).show();
                     return;
                 }
 
@@ -592,6 +708,9 @@ public class WarehouseDetailContent {
                     "SELECT COALESCE(SUM(total_weight), 0) as total FROM warehouse_stock_entries WHERE warehouse_id = ?");
             es.setInt(1, warehouseId); ResultSet ers = es.executeQuery();
             double totalIn = ers.next() ? ers.getDouble("total") : 0;
+
+            // البضاعة الداخلة بالنقل من مخازن تانية بتتحسب كمان ضمن إجمالي الداخل
+            totalIn += WarehouseDAO.getIncomingTransfersWeight(warehouseId);
 
             PreparedStatement xs = conn.prepareStatement(
                     "SELECT COALESCE(SUM(weight_green),0) as g, COALESCE(SUM(weight_colored),0) as c, " +

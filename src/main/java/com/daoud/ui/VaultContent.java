@@ -26,7 +26,8 @@ public class VaultContent {
     record InitialData(List<Supplier> suppliers, List<Worker> workers, List<Factory> factories,
                        SummaryData summary, List<VaultRow> rows) {}
 
-    public static Node build(int userId, String username, String role, int treasuryId, String treasuryName) {
+    public static Node build(int userId, String username, String role, int treasuryId, String treasuryName,
+                             String ownerType, int ownerId) {
 
         VBox summaryCard = new VBox(10);
         summaryCard.getStyleClass().add("card");
@@ -160,9 +161,14 @@ public class VaultContent {
         historyCard.getChildren().addAll(histTitle, filtersBox, buildTableHeader(), tableBody);
 
         // ── تحميل كل بيانات الشاشة مع بعض في الخلفية ──
+        // خزنة عم داود الرئيسية تشوف الموردين "العامين" بس (مش مرتبطين بمخزن)؛
+        // خزنة أي مخزن تشوف موردين المخزن ده بس (الموردين الصغيرين بتوعه).
+        boolean isWarehouseVault = "warehouse".equals(ownerType);
         AsyncHelper.run(
                 () -> new InitialData(
-                        com.daoud.dao.SupplierDAO.getAllSuppliers(),
+                        isWarehouseVault
+                                ? com.daoud.dao.WarehouseDAO.getSuppliersByWarehouse(ownerId)
+                                : com.daoud.dao.SupplierDAO.getGeneralSuppliers(),
                         loadAllWorkers(),
                         FactoryDAO.getAllFactories(),
                         loadSummary(treasuryId),

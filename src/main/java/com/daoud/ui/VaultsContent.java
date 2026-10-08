@@ -15,7 +15,7 @@ import java.util.List;
 
 public class VaultsContent {
 
-    record VaultInfo(int id, String name, String ownerType, double total) {}
+    record VaultInfo(int id, String name, String ownerType, int ownerId, double total) {}
 
     public static Node build(int userId, String username, String role) {
 
@@ -40,7 +40,7 @@ public class VaultsContent {
         String sql;
         if (role.equals("admin")) {
             sql = """
-                SELECT v.id, v.name, v.owner_type,
+                SELECT v.id, v.name, v.owner_type, v.owner_id,
                        COALESCE((SELECT SUM(CASE WHEN vt.direction='in' THEN vt.amount ELSE -vt.amount END)
                                  FROM vault_transactions vt WHERE vt.vault_id = v.id), 0) AS total
                 FROM vaults v
@@ -48,7 +48,7 @@ public class VaultsContent {
             """;
         } else {
             sql = """
-                SELECT v.id, v.name, v.owner_type,
+                SELECT v.id, v.name, v.owner_type, v.owner_id,
                        COALESCE((SELECT SUM(CASE WHEN vt.direction='in' THEN vt.amount ELSE -vt.amount END)
                                  FROM vault_transactions vt WHERE vt.vault_id = v.id), 0) AS total
                 FROM vaults v
@@ -63,7 +63,7 @@ public class VaultsContent {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 vaults.add(new VaultInfo(rs.getInt("id"), rs.getString("name"),
-                        rs.getString("owner_type"), rs.getDouble("total")));
+                        rs.getString("owner_type"), rs.getInt("owner_id"), rs.getDouble("total")));
             }
         }
         return vaults;
@@ -88,7 +88,8 @@ public class VaultsContent {
             Button openBtn = new Button("فتح الخزنة"); openBtn.getStyleClass().add("btn-primary");
             final VaultInfo vault = v;
             openBtn.setOnAction(e -> {
-                MainLayout.loadContent(VaultContent.build(userId, username, role, vault.id(), vault.name()));
+                MainLayout.loadContent(VaultContent.build(userId, username, role, vault.id(), vault.name(),
+                        vault.ownerType(), vault.ownerId()));
                 MainLayout.setTitle(vault.name());
             });
 
