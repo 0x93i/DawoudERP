@@ -15,19 +15,31 @@ import java.util.List;
  */
 public class FloorDAO {
 
-    public record FloorRow(int supplierId, String name, double floorAmount, int supplierNo) {}
+    /** warehouseId = -1 يعني المورد "عام" (مش مرتبط بأي مخزن). */
+    public record FloorRow(int supplierId, String name, double floorAmount, int supplierNo, int warehouseId) {}
 
     public record FloorTransaction(int id, String date, String direction, double amount,
                                    String notes, String recordedByName) {}
 
+    /**
+     * كل الموردين وأرضياتهم، مع المخزن اللي كل مورد مرتبط بيه (لو موجود)
+     * عشان شاشة الأرضيات تقدر تفلتر/تجمّع حسب المخزن أو "عام".
+     */
     public static List<FloorRow> getAllFloors() {
         List<FloorRow> list = new ArrayList<>();
-        String sql = "SELECT id, name, floor_amount, supplier_no FROM suppliers ORDER BY supplier_no NULLS LAST, name";
+        String sql = """
+            SELECT s.id, s.name, s.floor_amount, s.supplier_no,
+                   (SELECT ws.warehouse_id FROM warehouse_suppliers ws WHERE ws.supplier_id = s.id LIMIT 1) AS warehouse_id
+            FROM suppliers s
+            ORDER BY s.supplier_no NULLS LAST, s.name
+        """;
         try (Connection conn = DatabaseManager_online.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                list.add(new FloorRow(rs.getInt("id"), rs.getString("name"), rs.getDouble("floor_amount"), rs.getInt("supplier_no")));
+                int warehouseId = rs.getObject("warehouse_id") != null ? rs.getInt("warehouse_id") : -1;
+                list.add(new FloorRow(rs.getInt("id"), rs.getString("name"), rs.getDouble("floor_amount"),
+                        rs.getInt("supplier_no"), warehouseId));
             }
         } catch (SQLException e) {
             System.err.println("FloorDAO error: " + e.getMessage());
