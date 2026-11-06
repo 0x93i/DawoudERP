@@ -194,12 +194,14 @@ public class VaultContent {
             boolean isOut = "خروج".equals(directionCombo.getValue());
             String category;
             Factory sourceFactory = null;
+            Supplier targetSupplier = null;
 
             if (isOut) {
                 String t = targetTypeCombo.getValue();
                 if (t == null) { saveMsg.setText("اختار الصرف لمين"); return; }
                 if (t.equals("مورد")) {
                     if (supplierCombo.getValue() == null) { saveMsg.setText("اختار المورد"); return; }
+                    targetSupplier = supplierCombo.getValue();
                     category = "مورد: " + supplierCombo.getValue().getName();
                 } else if (t.equals("عامل")) {
                     if (workerCombo.getValue() == null) { saveMsg.setText("اختار العامل"); return; }
@@ -227,10 +229,12 @@ public class VaultContent {
             final String finalCategory = category;
             final boolean finalIsOut = isOut;
             final Factory finalSourceFactory = sourceFactory;
+            final Supplier finalTargetSupplier = targetSupplier;
             final String direction = isOut ? "out" : "in";
             final String paymentType = switch (paymentCombo.getValue()) {
                 case "بنك" -> "bank"; case "محفظة" -> "wallet"; case "شيك" -> "check"; default -> "cash";
             };
+            final String paymentLabel = paymentCombo.getValue();
             final String notes = notesField.getText().trim();
 
             saveMsg.setText("جاري الحفظ...");
@@ -252,6 +256,23 @@ public class VaultContent {
                         // بالظبط زي لو كانت اتسجلت من صفحة المصنع نفسها.
                         if (finalSourceFactory != null) {
                             FactoryDAO.addPayment(finalSourceFactory.getId(), amount, notes, userId);
+                        }
+                        // لو الخروج ده سحب لمورد، بنسجله كمان في supplier_withdrawals
+                        // عشان يظهر في سجل معاملات المورد نفسه (بالظبط زي لو كان
+                        // اتسجل من صفحة المورد مباشرة).
+                        if (finalTargetSupplier != null) {
+                            String supSql = "INSERT INTO supplier_withdrawals " +
+                                    "(supplier_id, amount, withdrawal_date, payment_method, recorded_by, notes) " +
+                                    "VALUES (?, ?, CURRENT_DATE, ?, ?, ?)";
+                            try (Connection conn = DatabaseManager_online.getConnection();
+                                 PreparedStatement stmt = conn.prepareStatement(supSql)) {
+                                stmt.setInt(1, finalTargetSupplier.getId());
+                                stmt.setDouble(2, amount);
+                                stmt.setString(3, paymentLabel);
+                                stmt.setInt(4, userId);
+                                stmt.setString(5, notes);
+                                stmt.executeUpdate();
+                            }
                         }
                         return "OK";
                     },
