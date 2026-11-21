@@ -19,8 +19,9 @@ public class FactoryDAO {
         List<ReportRow> list = new ArrayList<>();
         // مقارنة نصية (yyyy-MM-dd) بدل مقارنة تاريخ مباشرة، بنفس الطريقة اللي
         // حلّت مشكلة كمية الشهر — عشان تفضل شغالة صح مهما كان نوع العمود بالظبط.
-        String sql = "SELECT shipment_date, COALESCE(supplier_name,'') as supplier_name, " +
-                "gross_weight, deduction_pct, deduction_kg, price_per_kg, total_amount " +
+        String sql = "SELECT id, shipment_date, COALESCE(supplier_name,'') as supplier_name, " +
+                "gross_weight, deduction_pct, deduction_kg, price_per_kg, total_amount, " +
+                "COALESCE(notes, '') AS notes " +
                 "FROM factory_shipments WHERE factory_id = ? AND shipment_date::text >= ? AND shipment_date::text <= ? " +
                 "ORDER BY shipment_date";
         try (Connection conn = DatabaseManager_online.getConnection();
@@ -31,7 +32,7 @@ public class FactoryDAO {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 String supplierName = rs.getString("supplier_name");
-                list.add(new ReportRow(rs.getString("shipment_date"), "—",
+                list.add(new ReportRow(rs.getInt("id"), rs.getString("shipment_date"), rs.getString("notes"),
                         supplierName != null && !supplierName.isEmpty() ? supplierName : "—",
                         rs.getDouble("gross_weight"), rs.getDouble("deduction_pct"),
                         rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg"),

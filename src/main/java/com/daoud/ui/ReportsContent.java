@@ -14,11 +14,14 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import com.daoud.db.DatabaseManager_online;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,8 +91,9 @@ public class ReportsContent {
         exportBtn.setDisable(true);
         printBtn.setDisable(true);
 
+        HBox reportHeader = buildReportHeader(true);
         VBox reportCard = new VBox(8); reportCard.getStyleClass().add("card");
-        reportCard.getChildren().addAll(reportTitleLabel, buildReportHeader(), tableBody, totalsLabel);
+        reportCard.getChildren().addAll(reportTitleLabel, reportHeader, tableBody, totalsLabel);
 
         viewBtn.setOnAction(e -> {
             Object entity = entityCombo.getValue();
@@ -115,9 +119,10 @@ public class ReportsContent {
                     rows -> {
                         currentRows.clear();
                         currentRows.addAll(rows);
+                        updateReportHeader(reportHeader, isFactory);
                         reportTitleLabel.setText((isFactory ? "تقرير مصنع: " : "تقرير مورد: ") + entity +
                                 "   (من " + from + " لحد " + to + ")");
-                        renderReportTable(tableBody, totalsLabel, rows);
+                        renderReportTable(tableBody, totalsLabel, currentRows, isFactory);
                         viewMsg.setText(rows.isEmpty() ? "مفيش بيانات في الفترة دي" : "تم ✓ (" + rows.size() + " سجل)");
                         exportBtn.setDisable(rows.isEmpty());
                         printBtn.setDisable(rows.isEmpty());
@@ -157,10 +162,10 @@ public class ReportsContent {
         return new VBox(12, filtersCard, reportCard);
     }
 
-    private static HBox buildReportHeader() {
+    private static HBox buildReportHeader(boolean isFactory) {
         HBox header = new HBox();
         header.setStyle("-fx-background-color: #f5f5f3; -fx-padding: 8 10;");
-        String[] cols = {"التاريخ", "الملاحظات", "اسم المورد", "الوزن القائم", "نسبة الخصم", "كمية الخصم", "سعر الكيلو", "المبلغ"};
+        String[] cols = {"التاريخ", "الملاحظات", partyColumnTitle(isFactory), "الوزن القائم", "نسبة الخصم", "كمية الخصم", "سعر الكيلو", "المبلغ"};
         double[] widths = {90, 110, 130, 100, 90, 100, 100, 100};
         for (int i = 0; i < cols.length; i++) {
             Label lbl = new Label(cols[i]);
@@ -171,13 +176,28 @@ public class ReportsContent {
         return header;
     }
 
-    private static void renderReportTable(VBox table, Label totalsLabel, List<ReportRow> rows) {
+    /** بيحدّث عنوان عمود "المورد/المصنع" في الهيدر حسب نوع التقرير المعروض دلوقتي. */
+    private static void updateReportHeader(HBox header, boolean isFactory) {
+        if (header.getChildren().size() > 2 && header.getChildren().get(2) instanceof Label lbl) {
+            lbl.setText(partyColumnTitle(isFactory));
+        }
+    }
+
+    private static String partyColumnTitle(boolean isFactory) {
+        // تقرير مصنع: كل صف فيه اسم المورد اللي ودّى البضاعة دي.
+        // تقرير مورد: كل صف فيه اسم المصنع اللي البضاعة دي راحتله.
+        return isFactory ? "المورد الموصل" : "المصنع المستلم";
+    }
+
+    private static void renderReportTable(VBox table, Label totalsLabel, List<ReportRow> rows, boolean isFactory) {
         table.getChildren().clear();
         double[] widths = {90, 110, 130, 100, 90, 100, 100, 100};
         boolean odd = true;
         double totalGross = 0, totalAmount = 0;
 
-        for (ReportRow row : rows) {
+        for (int i = 0; i < rows.size(); i++) {
+            ReportRow row = rows.get(i);
+            final int rowIndex = i;
             totalGross += row.grossWeight();
             totalAmount += row.amount();
 
@@ -190,9 +210,24 @@ public class ReportsContent {
             dateLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #5f5e5a;");
             dateLbl.setMinWidth(widths[0]); dateLbl.setPrefWidth(widths[0]);
 
-            Label notesLbl = new Label(row.notes());
-            notesLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #888780;");
-            notesLbl.setMinWidth(widths[1]); notesLbl.setPrefWidth(widths[1]);
+            // خانة الملاحظات مفتوحة للكتابة: أي تعديل بيتسجل في قاعدة البيانات
+            // تلقائيًا لما تخرج من الخانة (أو تدوس Enter).
+            TextField notesField = new TextField(row.notes());
+            notesField.setStyle("-fx-font-size: 12px;");
+            notesField.setMinWidth(widths[1]); notesField.setPrefWidth(widths[1]);
+            Runnable saveIfChanged = () -> {
+                String newNotes = notesField.getText();
+                ReportRow current = rows.get(rowIndex);
+                if (!newNotes.equals(current.notes())) {
+                    rows.set(rowIndex, new ReportRow(current.id(), current.date(), newNotes, current.partyName(),
+                            current.grossWeight(), current.pct(), current.dedKg(), current.price(), current.amount()));
+                    saveReportNote(isFactory, current.id(), newNotes);
+                }
+            };
+            notesField.setOnAction(ev -> saveIfChanged.run());
+            notesField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+                if (!isFocused) saveIfChanged.run();
+            });
 
             Label partyLbl = new Label(row.partyName());
             partyLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #1a1a18;");
@@ -218,7 +253,7 @@ public class ReportsContent {
             amtLbl.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a18;");
             amtLbl.setMinWidth(widths[7]); amtLbl.setPrefWidth(widths[7]);
 
-            r.getChildren().addAll(dateLbl, notesLbl, partyLbl, grossLbl, pctLbl, dedKgLbl, priceLbl, amtLbl);
+            r.getChildren().addAll(dateLbl, notesField, partyLbl, grossLbl, pctLbl, dedKgLbl, priceLbl, amtLbl);
             table.getChildren().add(r);
         }
 
@@ -230,6 +265,24 @@ public class ReportsContent {
         } else {
             totalsLabel.setText(String.format("الإجمالي: %.1f كيلو  —  %.0f جنيه", totalGross, totalAmount));
         }
+    }
+
+    /** بيحفظ الملاحظة الجديدة على نفس سطر الحركة في جدوله الأصلي (حسب نوع التقرير). */
+    private static void saveReportNote(boolean isFactory, int rowId, String notes) {
+        String table = isFactory ? "factory_shipments" : "supplier_transactions";
+        String sql = "UPDATE " + table + " SET notes = ? WHERE id = ?";
+        AsyncHelper.runVoid(
+                () -> {
+                    try (Connection conn = DatabaseManager_online.getConnection();
+                         PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setString(1, notes);
+                        stmt.setInt(2, rowId);
+                        stmt.executeUpdate();
+                    }
+                },
+                () -> {},
+                error -> System.err.println("خطأ في حفظ الملاحظة: " + error.getMessage())
+        );
     }
 
     // ── تصدير التقرير لملف إكسيل (CSV بترميز UTF-8 عشان العربي يظهر صح) ──

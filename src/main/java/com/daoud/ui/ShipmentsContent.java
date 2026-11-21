@@ -27,6 +27,14 @@ public class ShipmentsContent {
                           double purchaseTotal, double costs, double fGross, double fDed, double fNet,
                           double sPrice, List<String[]> supplierRows) {}
 
+    // ── بيانات التعديل: نفس شكل الإضافة بس محمّلة من شحنة موجودة ──
+    record ShipmentSupplierRow(int supplierId, double gross, double pct, double price) {}
+    record ShipmentEditData(int factoryId, List<ShipmentSupplierRow> supplierRows,
+                            double factoryGross, double factoryPct, double salePrice,
+                            double costLoading, double costWorkers, double costFuel,
+                            double costTransport, double costOther) {}
+    record EditDialogData(List<Supplier> suppliers, List<Factory> factories, ShipmentEditData edit) {}
+
     private static class SupplierBlock {
         ComboBox<Supplier> combo;
         TextField grossField, pctField, priceField;
@@ -51,9 +59,77 @@ public class ShipmentsContent {
 
         AsyncHelper.run(
                 () -> new AddDialogData(loadNonWarehouseSuppliers(), FactoryDAO.getAllFactories()),
-                data -> { loadingDialog.close(); buildAddDialog(userId, tableBox, data.suppliers(), data.factories()); },
+                data -> { loadingDialog.close(); buildShipmentDialog(userId, tableBox, data.suppliers(), data.factories(), -1, null, "all"); },
                 error -> { loadingDialog.close(); }
         );
+    }
+
+    private static void showEditDialog(int userId, int shipmentId, VBox tableBox, String filter) {
+
+        VBox loadingBox = new VBox(new Label("جاري التحميل..."));
+        loadingBox.setPadding(new Insets(20));
+        loadingBox.setAlignment(Pos.CENTER);
+        Stage loadingDialog = DialogHelper.create("تعديل الشحنة", loadingBox, 300, 150);
+        loadingDialog.show();
+
+        AsyncHelper.run(
+                () -> new EditDialogData(loadNonWarehouseSuppliers(), FactoryDAO.getAllFactories(),
+                        loadShipmentEditData(shipmentId)),
+                data -> {
+                    loadingDialog.close();
+                    if (data.edit() == null) return;
+                    buildShipmentDialog(userId, tableBox, data.suppliers(), data.factories(), shipmentId, data.edit(), filter);
+                },
+                error -> loadingDialog.close()
+        );
+    }
+
+    /** بيحمّل بيانات شحنة موجودة بالشكل اللي الفورم محتاجه عشان يعرضه جاهز للتعديل. */
+    private static ShipmentEditData loadShipmentEditData(int shipmentId) throws SQLException {
+        try (Connection conn = DatabaseManager_online.getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM shipments WHERE id = ?");
+            stmt.setInt(1, shipmentId);
+            ResultSet rs = stmt.executeQuery();
+            if (!rs.next()) return null;
+
+            int factoryId = rs.getInt("factory_id");
+            double factoryGross = rs.getDouble("factory_gross_weight");
+            double factoryDed = rs.getDouble("factory_deduction_kg");
+            double factoryPct = factoryGross > 0 ? (factoryDed / factoryGross * 100) : 0;
+            double salePrice = rs.getDouble("sale_price_per_kg");
+            double costLoading = rs.getDouble("cost_loading");
+            double costWorkers = rs.getDouble("cost_workers");
+            double costFuel = rs.getDouble("cost_fuel");
+            double costTransport = rs.getDouble("cost_transport");
+            double costOther = rs.getDouble("cost_other");
+
+            List<ShipmentSupplierRow> supplierRows = new ArrayList<>();
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT supplier_id, gross_weight, deduction_pct, price_per_kg FROM shipment_suppliers " +
+                            "WHERE shipment_id = ? ORDER BY id")) {
+                ps.setInt(1, shipmentId);
+                ResultSet srs = ps.executeQuery();
+                while (srs.next()) {
+                    supplierRows.add(new ShipmentSupplierRow(
+                            srs.getInt("supplier_id"), srs.getDouble("gross_weight"),
+                            srs.getDouble("deduction_pct"), srs.getDouble("price_per_kg")));
+                }
+            }
+
+            // شحنات قديمة جدًا من قبل ما كان فيه شحنة متعددة الموردين — بيانات المورد الوحيد
+            // كانت متسجلة في جدول shipments نفسه من غير shipment_suppliers
+            if (supplierRows.isEmpty()) {
+                int supplierId = rs.getInt("supplier_id");
+                double gross = rs.getDouble("gross_weight");
+                double ded = rs.getDouble("deduction_kg");
+                double pct = gross > 0 ? (ded / gross * 100) : 0;
+                double price = rs.getDouble("price_per_kg");
+                if (supplierId > 0) supplierRows.add(new ShipmentSupplierRow(supplierId, gross, pct, price));
+            }
+
+            return new ShipmentEditData(factoryId, supplierRows, factoryGross, factoryPct, salePrice,
+                    costLoading, costWorkers, costFuel, costTransport, costOther);
+        }
     }
 
     // استعلام واحد بدل استعلام COUNT منفصل لكل مورد (N+1)
@@ -72,11 +148,16 @@ public class ShipmentsContent {
         return list;
     }
 
-    private static void buildAddDialog(int userId, VBox tableBox, List<Supplier> suppliers, List<Factory> factories) {
+    private static void buildShipmentDialog(int userId, VBox tableBox, List<Supplier> suppliers, List<Factory> factories,
+                                            int editShipmentId, ShipmentEditData editData, String filter) {
+        boolean isEdit = editShipmentId != -1;
 
         ComboBox<Factory> factoryCombo = new ComboBox<>(FXCollections.observableArrayList(factories));
         factoryCombo.setPromptText("اختار المصنع");
         factoryCombo.setMaxWidth(Double.MAX_VALUE);
+        if (isEdit) {
+            for (Factory f : factories) if (f.getId() == editData.factoryId()) { factoryCombo.setValue(f); break; }
+        }
 
         // ───────── الموردين (ديناميكي) ─────────
         List<SupplierBlock> blocks = new ArrayList<>();
@@ -86,24 +167,24 @@ public class ShipmentsContent {
         purchaseGrandTotalLbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #3B6D11; -fx-font-size: 13px;");
 
         // ───────── بيانات البيع للمصنع ─────────
-        TextField factoryGrossField = new TextField();
+        TextField factoryGrossField = new TextField(isEdit ? trimNum(editData.factoryGross()) : "");
         factoryGrossField.setPromptText("الوزن الإجمالي عند المصنع (كيلو)");
 
-        TextField factoryDeductionField = new TextField();
+        TextField factoryDeductionField = new TextField(isEdit ? trimNum(editData.factoryPct()) : "");
         factoryDeductionField.setPromptText("نسبة خصم المصنع %");
 
-        TextField salePriceField = new TextField();
+        TextField salePriceField = new TextField(isEdit ? trimNum(editData.salePrice()) : "");
         salePriceField.setPromptText("سعر البيع / كيلو");
 
         Label factoryNetLbl = new Label("صافي وزن المصنع: —");
         Label saleTotalLbl  = new Label("إجمالي البيع: —");
 
         // ───────── مصاريف التشغيل ─────────
-        TextField loadingField   = new TextField("0");
-        TextField workersField   = new TextField("0");
-        TextField fuelField      = new TextField("0");
-        TextField transportField = new TextField("0");
-        TextField otherField     = new TextField("0");
+        TextField loadingField   = new TextField(isEdit ? trimNum(editData.costLoading()) : "0");
+        TextField workersField   = new TextField(isEdit ? trimNum(editData.costWorkers()) : "0");
+        TextField fuelField      = new TextField(isEdit ? trimNum(editData.costFuel()) : "0");
+        TextField transportField = new TextField(isEdit ? trimNum(editData.costTransport()) : "0");
+        TextField otherField     = new TextField(isEdit ? trimNum(editData.costOther()) : "0");
 
         Label grossProfitLbl = new Label("مجمل الربح: —");
         Label netProfitLbl   = new Label("صافي الربح: —");
@@ -156,16 +237,22 @@ public class ShipmentsContent {
         // ───────── دالة إنشاء بلوك مورد ─────────
         Runnable[] renumber = new Runnable[1];
 
-        java.util.function.Supplier<SupplierBlock> makeBlock = () -> {
+        java.util.function.Function<ShipmentSupplierRow, SupplierBlock> makeBlock = (prefill) -> {
             SupplierBlock b = new SupplierBlock();
 
             b.combo = new ComboBox<>(FXCollections.observableArrayList(suppliers));
             b.combo.setPromptText("اختار المورد");
             b.combo.setMaxWidth(Double.MAX_VALUE);
+            if (prefill != null) {
+                for (Supplier s : suppliers) if (s.getId() == prefill.supplierId()) { b.combo.setValue(s); break; }
+            }
 
-            b.grossField = new TextField(); b.grossField.setPromptText("الوزن الإجمالي (كيلو)");
-            b.pctField   = new TextField(); b.pctField.setPromptText("نسبة الخصم %");
-            b.priceField = new TextField(); b.priceField.setPromptText("سعر الشراء / كيلو");
+            b.grossField = new TextField(prefill != null ? trimNum(prefill.gross()) : "");
+            b.grossField.setPromptText("الوزن الإجمالي (كيلو)");
+            b.pctField = new TextField(prefill != null ? trimNum(prefill.pct()) : "");
+            b.pctField.setPromptText("نسبة الخصم %");
+            b.priceField = new TextField(prefill != null ? trimNum(prefill.price()) : "");
+            b.priceField.setPromptText("سعر الشراء / كيلو");
 
             b.grossField.setMaxWidth(Double.MAX_VALUE);
             b.pctField.setMaxWidth(Double.MAX_VALUE);
@@ -224,17 +311,25 @@ public class ShipmentsContent {
             }
         };
 
-        // أول مورد
-        SupplierBlock first = makeBlock.get();
-        blocks.add(first);
-        suppliersContainer.getChildren().add(first.box);
+        // الموردين: لو تعديل، بلوك لكل مورد موجود في الشحنة؛ لو إضافة، بلوك واحد فاضي
+        if (isEdit && !editData.supplierRows().isEmpty()) {
+            for (ShipmentSupplierRow row : editData.supplierRows()) {
+                SupplierBlock b = makeBlock.apply(row);
+                blocks.add(b);
+                suppliersContainer.getChildren().add(b.box);
+            }
+        } else {
+            SupplierBlock first = makeBlock.apply(null);
+            blocks.add(first);
+            suppliersContainer.getChildren().add(first.box);
+        }
         renumber[0].run();
 
         Button addSupplierBtn = new Button("+ إضافة مورد");
         addSupplierBtn.setStyle("-fx-background-color: #EAF3DE; -fx-text-fill: #3B6D11; "
                 + "-fx-font-size: 12px; -fx-padding: 5 14; -fx-background-radius: 4; -fx-cursor: hand;");
         addSupplierBtn.setOnAction(ev -> {
-            SupplierBlock nb = makeBlock.get();
+            SupplierBlock nb = makeBlock.apply(null);
             blocks.add(nb);
             suppliersContainer.getChildren().add(nb.box);
             renumber[0].run();
@@ -250,7 +345,7 @@ public class ShipmentsContent {
         transportField.textProperty().addListener((o, ov, nv) -> calc.run());
         otherField.textProperty().addListener((o, ov, nv) -> calc.run());
 
-        Button saveBtn = new Button("حفظ الشحنة");
+        Button saveBtn = new Button(isEdit ? "حفظ التعديل" : "حفظ الشحنة");
         saveBtn.getStyleClass().add("btn-primary");
         Label errLbl = new Label("");
 
@@ -290,7 +385,8 @@ public class ShipmentsContent {
         VBox scrollContainer = new VBox(scrollPane);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-        Stage dialog = DialogHelper.create("شحنة جديدة", scrollContainer, 520, 680);
+        Stage dialog = DialogHelper.create(isEdit ? "تعديل الشحنة" : "شحنة جديدة", scrollContainer, 520, 680);
+        calc.run(); // يحسب ويعرض القيم المبدئية لو في بيانات تعديل جاهزة
 
         // ───────── الحفظ ─────────
         saveBtn.setOnAction(e -> {
@@ -343,12 +439,16 @@ public class ShipmentsContent {
             double costOther = parseD(otherField);
 
             AsyncHelper.run(
-                    () -> saveShipment(userId, factory, supplierSnapshots, factoryGross, factoryPct,
+                    () -> isEdit
+                            ? updateShipment(editShipmentId, userId, factory, supplierSnapshots, factoryGross, factoryPct,
+                            factoryDeduction, factoryNet, salePrice, costLoading, costWorkers, costFuel,
+                            costTransport, costOther)
+                            : saveShipment(userId, factory, supplierSnapshots, factoryGross, factoryPct,
                             factoryDeduction, factoryNet, salePrice, costLoading, costWorkers, costFuel,
                             costTransport, costOther),
                     result -> {
                         if (!result.ok()) { errLbl.setText(result.error()); return; }
-                        loadShipments(tableBox, "all");
+                        loadShipments(tableBox, filter, userId);
                         dialog.close();
                     },
                     error -> errLbl.setText("خطأ في قاعدة البيانات: " + error.getMessage()),
@@ -437,9 +537,11 @@ public class ShipmentsContent {
             String blockSql = "INSERT INTO shipment_suppliers " +
                     "(shipment_id, supplier_id, gross_weight, deduction_pct, deduction_kg, net_weight, price_per_kg, total_amount) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // shipment_id هنا بيربط كل حركة مورد بالشحنة اللي جابتها، عشان لو
+            // الشحنة اتعدلت أو حُذفت نقدر نلاقي ونمسح/نحدّث الحركة الصحيحة بس.
             String supTransSql = "INSERT INTO supplier_transactions " +
-                    "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by) " +
-                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?)";
+                    "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by, shipment_id) " +
+                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?)";
 
             try (Connection conn = DatabaseManager_online.getConnection();
                  PreparedStatement bs = conn.prepareStatement(blockSql);
@@ -466,6 +568,7 @@ public class ShipmentsContent {
                     ts.setDouble(3, dedKg);
                     ts.setDouble(4, price);
                     ts.setInt(5, userId);
+                    if (shipmentId != -1) ts.setInt(6, shipmentId); else ts.setNull(6, Types.INTEGER);
                     ts.addBatch();
                 }
                 if (shipmentId != -1) bs.executeBatch();
@@ -479,10 +582,11 @@ public class ShipmentsContent {
                 namesSb.append(sup.getName());
             }
 
+            // نفس الفكرة: shipment_id بيربط سطر حساب المصنع ده بالشحنة اللي جابته.
             String factoryShipSql = "INSERT INTO factory_shipments " +
                     "(factory_id, shipment_date, supplier_name, gross_weight, deduction_pct, deduction_kg, " +
-                    "net_weight, price_per_kg, total_amount, source, recorded_by) " +
-                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, 'supplier', ?)";
+                    "net_weight, price_per_kg, total_amount, source, recorded_by, shipment_id) " +
+                    "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, 'supplier', ?, ?)";
             try (Connection conn2 = DatabaseManager_online.getConnection();
                  PreparedStatement stmt2 = conn2.prepareStatement(factoryShipSql)) {
                 stmt2.setInt(1, factory.getId());
@@ -494,6 +598,7 @@ public class ShipmentsContent {
                 stmt2.setDouble(7, salePrice);
                 stmt2.setDouble(8, saleTotal);
                 stmt2.setInt(9, userId);
+                if (shipmentId != -1) stmt2.setInt(10, shipmentId); else stmt2.setNull(10, Types.INTEGER);
                 stmt2.executeUpdate();
             }
 
@@ -504,11 +609,330 @@ public class ShipmentsContent {
         }
     }
 
+    /**
+     * تعديل شحنة موجودة: بيحدّث جدول shipments، وبيمسح-ويعيد-إدخال
+     * shipment_suppliers و supplier_transactions و factory_shipments المرتبطين
+     * بيها (عن طريق shipment_id)، عشان كل حاجة مرتبطة تتحدث معاها.
+     *
+     * ملحوظة: الشحنات اللي كانت متسجلة قبل إضافة عمود shipment_id (شحنات
+     * قديمة) معندهاش ربط مباشر في supplier_transactions/factory_shipments؛
+     * فبنحاول أولاً نمسح بالـ shipment_id، ولو مفيش نتيجة بنحاول نمسح أقرب
+     * سطر قديم يطابق القيم الأصلية المسجلة في الشحنة (قبل التعديل) تمامًا،
+     * فلو فشل التطابق (غيّر حد البيانات يدوي قبل كده) هيفضل سطر قديم زيادة
+     * ولازم يتمسح يدوي.
+     */
+    private static ShipmentSaveResult updateShipment(int shipmentId, int userId, Factory factory,
+                                                     List<Object[]> supplierSnapshots,
+                                                     double factoryGross, double factoryPct, double factoryDeduction,
+                                                     double factoryNet, double salePrice, double costLoading,
+                                                     double costWorkers, double costFuel, double costTransport,
+                                                     double costOther) {
+        try (Connection conn = DatabaseManager_online.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // ── هات القيم القديمة للشحنة قبل التعديل، عشان نستخدمها كـ fallback ──
+                int oldFactoryId = -1;
+                double oldFactoryGross = 0, oldFactoryDed = 0, oldSalePrice = 0;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT factory_id, factory_gross_weight, factory_deduction_kg, sale_price_per_kg FROM shipments WHERE id = ?")) {
+                    ps.setInt(1, shipmentId);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        oldFactoryId = rs.getInt("factory_id");
+                        oldFactoryGross = rs.getDouble("factory_gross_weight");
+                        oldFactoryDed = rs.getDouble("factory_deduction_kg");
+                        oldSalePrice = rs.getDouble("sale_price_per_kg");
+                    }
+                }
+                List<Object[]> oldSupplierRows = new ArrayList<>(); // [supplierId, gross, dedKg, price]
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT supplier_id, gross_weight, deduction_kg, price_per_kg FROM shipment_suppliers WHERE shipment_id = ?")) {
+                    ps.setInt(1, shipmentId);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        oldSupplierRows.add(new Object[]{rs.getInt("supplier_id"), rs.getDouble("gross_weight"),
+                                rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg")});
+                    }
+                }
+
+                double purchaseGrandTotal = 0, grossSum = 0, dedSum = 0, netSum = 0;
+                for (Object[] s : supplierSnapshots) {
+                    purchaseGrandTotal += (double) s[6];
+                    grossSum += (double) s[1];
+                    dedSum += (double) s[3];
+                    netSum += (double) s[4];
+                }
+                double avgPurchasePrice = netSum > 0 ? purchaseGrandTotal / netSum : 0;
+                double saleTotal = factoryNet * salePrice;
+                double totalCosts = costLoading + costWorkers + costFuel + costTransport + costOther;
+                double grossProfit = saleTotal - purchaseGrandTotal;
+                double netProfit = saleTotal - (purchaseGrandTotal + totalCosts);
+                Supplier firstSupplier = (Supplier) supplierSnapshots.get(0)[0];
+
+                // ── تحديث جدول shipments نفسه ──
+                String updSql = """
+                    UPDATE shipments SET
+                        supplier_id = ?, factory_id = ?,
+                        gross_weight = ?, deduction_kg = ?, net_weight = ?, price_per_kg = ?, total_amount = ?,
+                        purchase_price_per_kg = ?, purchase_total = ?,
+                        factory_gross_weight = ?, factory_deduction_kg = ?, factory_net_weight = ?,
+                        sale_price_per_kg = ?, sale_total = ?,
+                        cost_loading = ?, cost_workers = ?, cost_fuel = ?, cost_transport = ?, cost_other = ?,
+                        gross_profit = ?, net_profit = ?
+                    WHERE id = ?
+                """;
+                try (PreparedStatement stmt = conn.prepareStatement(updSql)) {
+                    int i = 1;
+                    stmt.setInt(i++, firstSupplier.getId());
+                    stmt.setInt(i++, factory.getId());
+                    stmt.setDouble(i++, grossSum);
+                    stmt.setDouble(i++, dedSum);
+                    stmt.setDouble(i++, netSum);
+                    stmt.setDouble(i++, avgPurchasePrice);
+                    stmt.setDouble(i++, purchaseGrandTotal);
+                    stmt.setDouble(i++, avgPurchasePrice);
+                    stmt.setDouble(i++, purchaseGrandTotal);
+                    stmt.setDouble(i++, factoryGross);
+                    stmt.setDouble(i++, factoryDeduction);
+                    stmt.setDouble(i++, factoryNet);
+                    stmt.setDouble(i++, salePrice);
+                    stmt.setDouble(i++, saleTotal);
+                    stmt.setDouble(i++, costLoading);
+                    stmt.setDouble(i++, costWorkers);
+                    stmt.setDouble(i++, costFuel);
+                    stmt.setDouble(i++, costTransport);
+                    stmt.setDouble(i++, costOther);
+                    stmt.setDouble(i++, grossProfit);
+                    stmt.setDouble(i++, netProfit);
+                    stmt.setInt(i++, shipmentId);
+                    stmt.executeUpdate();
+                }
+
+                // ── شيل القديم: shipment_suppliers (مربوط بـ shipment_id دايمًا) ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM shipment_suppliers WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    del.executeUpdate();
+                }
+
+                // ── شيل القديم: supplier_transactions (بالـ shipment_id، أو fallback بالقيم القديمة لو شحنة قديمة) ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM supplier_transactions WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    int affected = del.executeUpdate();
+                    if (affected == 0 && !oldSupplierRows.isEmpty()) {
+                        try (PreparedStatement fb = conn.prepareStatement(
+                                "DELETE FROM supplier_transactions WHERE id IN (" +
+                                        "SELECT id FROM supplier_transactions WHERE shipment_id IS NULL AND supplier_id = ? " +
+                                        "AND gross_weight = ? AND deduction_kg = ? AND price_per_kg = ? ORDER BY id LIMIT 1)")) {
+                            for (Object[] old : oldSupplierRows) {
+                                fb.setInt(1, (int) old[0]);
+                                fb.setDouble(2, (double) old[1]);
+                                fb.setDouble(3, (double) old[2]);
+                                fb.setDouble(4, (double) old[3]);
+                                fb.executeUpdate();
+                            }
+                        }
+                    }
+                }
+
+                // ── شيل القديم: factory_shipments (نفس المنطق) ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM factory_shipments WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    int affected = del.executeUpdate();
+                    if (affected == 0 && oldFactoryId != -1) {
+                        try (PreparedStatement fb = conn.prepareStatement(
+                                "DELETE FROM factory_shipments WHERE id IN (" +
+                                        "SELECT id FROM factory_shipments WHERE shipment_id IS NULL AND source = 'supplier' " +
+                                        "AND factory_id = ? AND gross_weight = ? AND deduction_kg = ? AND price_per_kg = ? " +
+                                        "ORDER BY id LIMIT 1)")) {
+                            fb.setInt(1, oldFactoryId);
+                            fb.setDouble(2, oldFactoryGross);
+                            fb.setDouble(3, oldFactoryDed);
+                            fb.setDouble(4, oldSalePrice);
+                            fb.executeUpdate();
+                        }
+                    }
+                }
+
+                // ── إدخال الجديد: shipment_suppliers + supplier_transactions ──
+                String blockSql = "INSERT INTO shipment_suppliers " +
+                        "(shipment_id, supplier_id, gross_weight, deduction_pct, deduction_kg, net_weight, price_per_kg, total_amount) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                String supTransSql = "INSERT INTO supplier_transactions " +
+                        "(supplier_id, transaction_date, gross_weight, deduction_kg, price_per_kg, recorded_by, shipment_id) " +
+                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?)";
+                try (PreparedStatement bs = conn.prepareStatement(blockSql);
+                     PreparedStatement ts = conn.prepareStatement(supTransSql)) {
+                    for (Object[] s : supplierSnapshots) {
+                        Supplier sup = (Supplier) s[0];
+                        double gross = (double) s[1], pct = (double) s[2], dedKg = (double) s[3],
+                                net = (double) s[4], price = (double) s[5], total = (double) s[6];
+
+                        bs.setInt(1, shipmentId);
+                        bs.setInt(2, sup.getId());
+                        bs.setDouble(3, gross);
+                        bs.setDouble(4, pct);
+                        bs.setDouble(5, dedKg);
+                        bs.setDouble(6, net);
+                        bs.setDouble(7, price);
+                        bs.setDouble(8, total);
+                        bs.addBatch();
+
+                        ts.setInt(1, sup.getId());
+                        ts.setDouble(2, gross);
+                        ts.setDouble(3, dedKg);
+                        ts.setDouble(4, price);
+                        ts.setInt(5, userId);
+                        ts.setInt(6, shipmentId);
+                        ts.addBatch();
+                    }
+                    bs.executeBatch();
+                    ts.executeBatch();
+                }
+
+                // ── إدخال الجديد: factory_shipments ──
+                StringBuilder namesSb = new StringBuilder();
+                for (Object[] s : supplierSnapshots) {
+                    Supplier sup = (Supplier) s[0];
+                    if (namesSb.length() > 0) namesSb.append(" + ");
+                    namesSb.append(sup.getName());
+                }
+                String factoryShipSql = "INSERT INTO factory_shipments " +
+                        "(factory_id, shipment_date, supplier_name, gross_weight, deduction_pct, deduction_kg, " +
+                        "net_weight, price_per_kg, total_amount, source, recorded_by, shipment_id) " +
+                        "VALUES (?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, 'supplier', ?, ?)";
+                try (PreparedStatement stmt2 = conn.prepareStatement(factoryShipSql)) {
+                    stmt2.setInt(1, factory.getId());
+                    stmt2.setString(2, namesSb.toString());
+                    stmt2.setDouble(3, factoryGross);
+                    stmt2.setDouble(4, factoryPct);
+                    stmt2.setDouble(5, factoryDeduction);
+                    stmt2.setDouble(6, factoryNet);
+                    stmt2.setDouble(7, salePrice);
+                    stmt2.setDouble(8, saleTotal);
+                    stmt2.setInt(9, userId);
+                    stmt2.setInt(10, shipmentId);
+                    stmt2.executeUpdate();
+                }
+
+                conn.commit();
+                return new ShipmentSaveResult(true, null);
+            } catch (SQLException ex) {
+                conn.rollback();
+                return new ShipmentSaveResult(false, "خطأ في قاعدة البيانات: " + ex.getMessage());
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            return new ShipmentSaveResult(false, "خطأ في قاعدة البيانات: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * حذف شحنة بالكامل: بيمسح الشحنة نفسها وكل الحركات المرتبطة بيها في
+     * shipment_suppliers و supplier_transactions و factory_shipments، كل ده
+     * جوه transaction واحدة (لو حصل خطأ في أي خطوة، كل الحذف بيترجع زي ما كان).
+     *
+     * نفس منطق fallback المستخدم في updateShipment: الحركات القديمة (قبل
+     * إضافة عمود shipment_id) بتتمسح بمطابقة القيم الأصلية المسجلة في
+     * الشحنة لو مفيش shipment_id مربوط بيها.
+     */
+    private static ShipmentSaveResult deleteShipment(int shipmentId) {
+        try (Connection conn = DatabaseManager_online.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int oldFactoryId = -1;
+                double oldFactoryGross = 0, oldFactoryDed = 0, oldSalePrice = 0;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT factory_id, factory_gross_weight, factory_deduction_kg, sale_price_per_kg FROM shipments WHERE id = ?")) {
+                    ps.setInt(1, shipmentId);
+                    ResultSet rs = ps.executeQuery();
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return new ShipmentSaveResult(false, "الشحنة دي غير موجودة");
+                    }
+                    oldFactoryId = rs.getInt("factory_id");
+                    oldFactoryGross = rs.getDouble("factory_gross_weight");
+                    oldFactoryDed = rs.getDouble("factory_deduction_kg");
+                    oldSalePrice = rs.getDouble("sale_price_per_kg");
+                }
+                List<Object[]> oldSupplierRows = new ArrayList<>(); // [supplierId, gross, dedKg, price]
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT supplier_id, gross_weight, deduction_kg, price_per_kg FROM shipment_suppliers WHERE shipment_id = ?")) {
+                    ps.setInt(1, shipmentId);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        oldSupplierRows.add(new Object[]{rs.getInt("supplier_id"), rs.getDouble("gross_weight"),
+                                rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg")});
+                    }
+                }
+
+                // ── supplier_transactions: بالـ shipment_id، أو fallback بالقيم القديمة لو شحنة قديمة ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM supplier_transactions WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    int affected = del.executeUpdate();
+                    if (affected == 0 && !oldSupplierRows.isEmpty()) {
+                        try (PreparedStatement fb = conn.prepareStatement(
+                                "DELETE FROM supplier_transactions WHERE id IN (" +
+                                        "SELECT id FROM supplier_transactions WHERE shipment_id IS NULL AND supplier_id = ? " +
+                                        "AND gross_weight = ? AND deduction_kg = ? AND price_per_kg = ? ORDER BY id LIMIT 1)")) {
+                            for (Object[] old : oldSupplierRows) {
+                                fb.setInt(1, (int) old[0]);
+                                fb.setDouble(2, (double) old[1]);
+                                fb.setDouble(3, (double) old[2]);
+                                fb.setDouble(4, (double) old[3]);
+                                fb.executeUpdate();
+                            }
+                        }
+                    }
+                }
+
+                // ── factory_shipments: نفس المنطق ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM factory_shipments WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    int affected = del.executeUpdate();
+                    if (affected == 0 && oldFactoryId != -1) {
+                        try (PreparedStatement fb = conn.prepareStatement(
+                                "DELETE FROM factory_shipments WHERE id IN (" +
+                                        "SELECT id FROM factory_shipments WHERE shipment_id IS NULL AND source = 'supplier' " +
+                                        "AND factory_id = ? AND gross_weight = ? AND deduction_kg = ? AND price_per_kg = ? " +
+                                        "ORDER BY id LIMIT 1)")) {
+                            fb.setInt(1, oldFactoryId);
+                            fb.setDouble(2, oldFactoryGross);
+                            fb.setDouble(3, oldFactoryDed);
+                            fb.setDouble(4, oldSalePrice);
+                            fb.executeUpdate();
+                        }
+                    }
+                }
+
+                // ── shipment_suppliers ثم الشحنة نفسها ──
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM shipment_suppliers WHERE shipment_id = ?")) {
+                    del.setInt(1, shipmentId);
+                    del.executeUpdate();
+                }
+                try (PreparedStatement del = conn.prepareStatement("DELETE FROM shipments WHERE id = ?")) {
+                    del.setInt(1, shipmentId);
+                    del.executeUpdate();
+                }
+
+                conn.commit();
+                return new ShipmentSaveResult(true, null);
+            } catch (SQLException ex) {
+                conn.rollback();
+                return new ShipmentSaveResult(false, "خطأ في قاعدة البيانات: " + ex.getMessage());
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            return new ShipmentSaveResult(false, "خطأ في قاعدة البيانات: " + ex.getMessage());
+        }
+    }
+
     public static Node build(int userId, String username, String role) {
 
         VBox tableBox = new VBox(0);
         tableBox.getChildren().add(new Label("جاري التحميل..."));
-        loadShipments(tableBox, "all");
+        loadShipments(tableBox, "all", userId);
 
         Button addBtn = new Button("+ شحنة جديدة");
         addBtn.getStyleClass().add("btn-primary");
@@ -543,10 +967,10 @@ public class ShipmentsContent {
         return header;
     }
 
-    private static void loadShipments(VBox container, String filter) {
+    private static void loadShipments(VBox container, String filter, int userId) {
         AsyncHelper.run(
                 ShipmentsContent::loadShipmentRows,
-                rows -> renderShipments(container, rows, filter),
+                rows -> renderShipments(container, rows, filter, userId),
                 error -> container.getChildren().setAll(new Label("خطأ: " + error.getMessage()))
         );
     }
@@ -591,7 +1015,7 @@ public class ShipmentsContent {
         return rows;
     }
 
-    private static void renderShipments(VBox container, List<ShipmentRowData> rows, String filter) {
+    private static void renderShipments(VBox container, List<ShipmentRowData> rows, String filter, int userId) {
         container.getChildren().clear();
 
         if (rows.isEmpty()) {
@@ -633,10 +1057,45 @@ public class ShipmentsContent {
 
             Button detailBtn = new Button("تفاصيل");
             detailBtn.setStyle("-fx-font-size: 11px; -fx-padding: 3 8; -fx-background-color: white; -fx-border-color: #c0c0c0; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;");
-            detailBtn.setMinWidth(80); detailBtn.setPrefWidth(80);
+            detailBtn.setMinWidth(60); detailBtn.setPrefWidth(60);
             final int shipId = row.id();
             detailBtn.setOnAction(e -> showDetailDialog(shipId, container, filter));
-            r.getChildren().add(detailBtn);
+
+            Button editBtn = new Button("تعديل");
+            editBtn.setStyle("-fx-font-size: 11px; -fx-padding: 3 8; -fx-background-color: white; -fx-border-color: #c0c0c0; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;");
+            editBtn.setMinWidth(60); editBtn.setPrefWidth(60);
+            editBtn.setOnAction(e -> showEditDialog(userId, shipId, container, filter));
+
+            Button deleteBtn = new Button("حذف");
+            deleteBtn.setStyle("-fx-font-size: 11px; -fx-padding: 3 8; -fx-background-color: white; -fx-border-color: #A32D2D; -fx-text-fill: #A32D2D; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;");
+            deleteBtn.setMinWidth(60); deleteBtn.setPrefWidth(60);
+            deleteBtn.setOnAction(e -> {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                        "هتحذف الشحنة دي نهائيًا وكل الحركات المرتبطة بيها (حسابات الموردين وحساب المصنع)، ومش هترجع. متأكد؟");
+                confirm.showAndWait().ifPresent(res -> {
+                    if (res == ButtonType.OK) {
+                        deleteBtn.setDisable(true);
+                        AsyncHelper.run(
+                                () -> deleteShipment(shipId),
+                                result -> {
+                                    if (!result.ok()) {
+                                        deleteBtn.setDisable(false);
+                                        new Alert(Alert.AlertType.ERROR, result.error()).showAndWait();
+                                        return;
+                                    }
+                                    loadShipments(container, filter, userId);
+                                },
+                                error -> {
+                                    deleteBtn.setDisable(false);
+                                    new Alert(Alert.AlertType.ERROR, "خطأ في قاعدة البيانات: " + error.getMessage()).showAndWait();
+                                }
+                        );
+                    }
+                });
+            });
+
+            HBox actionsBox = new HBox(4, detailBtn, editBtn, deleteBtn);
+            r.getChildren().add(actionsBox);
 
             container.getChildren().add(r);
         }
@@ -817,6 +1276,12 @@ public class ShipmentsContent {
 
     private static double parseD(TextField f) {
         try { return Double.parseDouble(f.getText().trim()); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /** بيحوّل رقم لنص مناسب لعرضه في TextField عند التعديل: بدون فاصلة عشرية لو الرقم صحيح. */
+    private static String trimNum(double v) {
+        if (v == Math.floor(v) && !Double.isInfinite(v)) return String.valueOf((long) v);
+        return String.valueOf(v);
     }
 
     private static String getStatusStyle(String status) {

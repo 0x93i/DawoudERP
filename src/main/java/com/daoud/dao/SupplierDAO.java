@@ -19,9 +19,15 @@ public class SupplierDAO {
         List<ReportRow> list = new ArrayList<>();
         // مقارنة نصية (yyyy-MM-dd) بدل مقارنة تاريخ مباشرة، بنفس الطريقة اللي
         // حلّت مشكلة كمية الشهر — عشان تفضل شغالة صح مهما كان نوع العمود بالظبط.
-        String sql = "SELECT transaction_date, gross_weight, deduction_kg, price_per_kg " +
-                "FROM supplier_transactions WHERE supplier_id = ? AND transaction_date::text >= ? AND transaction_date::text <= ? " +
-                "ORDER BY transaction_date";
+        // بنجيب اسم المصنع اللي البضاعة دي راحتله عن طريق shipment_id (لو
+        // الحركة دي جايّة من شحنة)؛ لو مسجلة يدوي من غير شحنة بيظهر "—".
+        String sql = "SELECT st.id, st.transaction_date, st.gross_weight, st.deduction_kg, st.price_per_kg, " +
+                "COALESCE(st.notes, '') AS notes, f.name AS factory_name " +
+                "FROM supplier_transactions st " +
+                "LEFT JOIN shipments sh ON st.shipment_id = sh.id " +
+                "LEFT JOIN factories f ON sh.factory_id = f.id " +
+                "WHERE st.supplier_id = ? AND st.transaction_date::text >= ? AND st.transaction_date::text <= ? " +
+                "ORDER BY st.transaction_date";
         try (Connection conn = DatabaseManager_online.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, supplierId);
@@ -34,7 +40,9 @@ public class SupplierDAO {
                 double price = rs.getDouble("price_per_kg");
                 double net = gross - ded;
                 double pct = gross > 0 ? (ded / gross * 100) : 0;
-                list.add(new ReportRow(rs.getString("transaction_date"), "—", supplierName,
+                String factoryName = rs.getString("factory_name");
+                list.add(new ReportRow(rs.getInt("id"), rs.getString("transaction_date"), rs.getString("notes"),
+                        factoryName != null && !factoryName.isEmpty() ? factoryName : "—",
                         gross, pct, ded, price, net * price));
             }
         } catch (SQLException e) {
