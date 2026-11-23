@@ -1,0 +1,380 @@
+<html>
+<head>
+<title>jawt.h</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #7a7e85;}
+.s2 { color: #bcbec4;}
+.s3 { color: #cf8e6d;}
+.s4 { color: #56a8f5;}
+.s5 { color: #6aab73;}
+.s6 { color: #2aacb8; font-style: italic;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+jawt.h</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">/*</span>
+<a name="l2"><span class="ln">2    </span></a> <span class="s1">* Copyright (c) 1999, 2017, Oracle and/or its affiliates. All rights reserved. 
+<a name="l3"><span class="ln">3    </span></a> * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms. 
+<a name="l4"><span class="ln">4    </span></a> * 
+<a name="l5"><span class="ln">5    </span></a> * 
+<a name="l6"><span class="ln">6    </span></a> * 
+<a name="l7"><span class="ln">7    </span></a> * 
+<a name="l8"><span class="ln">8    </span></a> * 
+<a name="l9"><span class="ln">9    </span></a> * 
+<a name="l10"><span class="ln">10   </span></a> * 
+<a name="l11"><span class="ln">11   </span></a> * 
+<a name="l12"><span class="ln">12   </span></a> * 
+<a name="l13"><span class="ln">13   </span></a> * 
+<a name="l14"><span class="ln">14   </span></a> * 
+<a name="l15"><span class="ln">15   </span></a> * 
+<a name="l16"><span class="ln">16   </span></a> * 
+<a name="l17"><span class="ln">17   </span></a> * 
+<a name="l18"><span class="ln">18   </span></a> * 
+<a name="l19"><span class="ln">19   </span></a> * 
+<a name="l20"><span class="ln">20   </span></a> * 
+<a name="l21"><span class="ln">21   </span></a> * 
+<a name="l22"><span class="ln">22   </span></a> * 
+<a name="l23"><span class="ln">23   </span></a> * 
+<a name="l24"><span class="ln">24   </span></a> </span><span class="s0">*/</span>
+<a name="l25"><span class="ln">25   </span></a>
+<a name="l26"><span class="ln">26   </span></a><span class="s0">#</span><span class="s3">ifndef </span><span class="s4">_JAVASOFT_JAWT_H_</span>
+<a name="l27"><span class="ln">27   </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">_JAVASOFT_JAWT_H_</span>
+<a name="l28"><span class="ln">28   </span></a>
+<a name="l29"><span class="ln">29   </span></a><span class="s0">#</span><span class="s3">include </span><span class="s0">&quot;</span><span class="s5">jni.h</span><span class="s0">&quot;</span>
+<a name="l30"><span class="ln">30   </span></a>
+<a name="l31"><span class="ln">31   </span></a><span class="s0">#</span><span class="s3">ifdef </span><span class="s0">__cplusplus</span>
+<a name="l32"><span class="ln">32   </span></a><span class="s3">extern </span><span class="s0">&quot;</span><span class="s5">C</span><span class="s0">&quot; {</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s0">#</span><span class="s3">endif</span>
+<a name="l34"><span class="ln">34   </span></a>
+<a name="l35"><span class="ln">35   </span></a><span class="s0">/*</span>
+<a name="l36"><span class="ln">36   </span></a> <span class="s1">* AWT native interface. 
+<a name="l37"><span class="ln">37   </span></a> * 
+<a name="l38"><span class="ln">38   </span></a> * The AWT native interface allows a native C or C++ application a means 
+<a name="l39"><span class="ln">39   </span></a> * by which to access native structures in AWT.  This is to facilitate moving 
+<a name="l40"><span class="ln">40   </span></a> * legacy C and C++ applications to Java and to target the needs of the 
+<a name="l41"><span class="ln">41   </span></a> * developers who need to do their own native rendering to canvases 
+<a name="l42"><span class="ln">42   </span></a> * for performance or other reasons. 
+<a name="l43"><span class="ln">43   </span></a> * 
+<a name="l44"><span class="ln">44   </span></a> * Conversely it also provides mechanisms for an application which already 
+<a name="l45"><span class="ln">45   </span></a> * has a native window to provide that to AWT for AWT rendering. 
+<a name="l46"><span class="ln">46   </span></a> * 
+<a name="l47"><span class="ln">47   </span></a> * Since every platform may be different in its native data structures 
+<a name="l48"><span class="ln">48   </span></a> * and APIs for windowing systems the application must necessarily 
+<a name="l49"><span class="ln">49   </span></a> * provided per-platform source and compile and deliver per-platform 
+<a name="l50"><span class="ln">50   </span></a> * native code  to use this API. 
+<a name="l51"><span class="ln">51   </span></a> * 
+<a name="l52"><span class="ln">52   </span></a> * These interfaces are not part of the Java SE specification and 
+<a name="l53"><span class="ln">53   </span></a> * a VM is not required to implement this API. However it is strongly 
+<a name="l54"><span class="ln">54   </span></a> * recommended that all implementations which support headful AWT 
+<a name="l55"><span class="ln">55   </span></a> * also support these interfaces. 
+<a name="l56"><span class="ln">56   </span></a> * 
+<a name="l57"><span class="ln">57   </span></a> </span><span class="s0">*/</span>
+<a name="l58"><span class="ln">58   </span></a>
+<a name="l59"><span class="ln">59   </span></a><span class="s0">/*</span>
+<a name="l60"><span class="ln">60   </span></a> <span class="s1">* AWT Native Drawing Surface (JAWT_DrawingSurface). 
+<a name="l61"><span class="ln">61   </span></a> * 
+<a name="l62"><span class="ln">62   </span></a> * For each platform, there is a native drawing surface structure.  This 
+<a name="l63"><span class="ln">63   </span></a> * platform-specific structure can be found in jawt_md.h.  It is recommended 
+<a name="l64"><span class="ln">64   </span></a> * that additional platforms follow the same model.  It is also recommended 
+<a name="l65"><span class="ln">65   </span></a> * that VMs on all platforms support the existing structures in jawt_md.h. 
+<a name="l66"><span class="ln">66   </span></a> * 
+<a name="l67"><span class="ln">67   </span></a> ******************* 
+<a name="l68"><span class="ln">68   </span></a> * EXAMPLE OF USAGE: 
+<a name="l69"><span class="ln">69   </span></a> ******************* 
+<a name="l70"><span class="ln">70   </span></a> * 
+<a name="l71"><span class="ln">71   </span></a> * In Win32, a programmer wishes to access the HWND of a canvas to perform 
+<a name="l72"><span class="ln">72   </span></a> * native rendering into it.  The programmer has declared the paint() method 
+<a name="l73"><span class="ln">73   </span></a> * for their canvas subclass to be native: 
+<a name="l74"><span class="ln">74   </span></a> * 
+<a name="l75"><span class="ln">75   </span></a> * 
+<a name="l76"><span class="ln">76   </span></a> * MyCanvas.java: 
+<a name="l77"><span class="ln">77   </span></a> * 
+<a name="l78"><span class="ln">78   </span></a> * import java.awt.*; 
+<a name="l79"><span class="ln">79   </span></a> * 
+<a name="l80"><span class="ln">80   </span></a> * public class MyCanvas extends Canvas { 
+<a name="l81"><span class="ln">81   </span></a> * 
+<a name="l82"><span class="ln">82   </span></a> *     static { 
+<a name="l83"><span class="ln">83   </span></a> *         System.loadLibrary(&quot;mylib&quot;); 
+<a name="l84"><span class="ln">84   </span></a> *     } 
+<a name="l85"><span class="ln">85   </span></a> * 
+<a name="l86"><span class="ln">86   </span></a> *     public native void paint(Graphics g); 
+<a name="l87"><span class="ln">87   </span></a> * } 
+<a name="l88"><span class="ln">88   </span></a> * 
+<a name="l89"><span class="ln">89   </span></a> * 
+<a name="l90"><span class="ln">90   </span></a> * myfile.c: 
+<a name="l91"><span class="ln">91   </span></a> * 
+<a name="l92"><span class="ln">92   </span></a> * #include &quot;jawt_md.h&quot; 
+<a name="l93"><span class="ln">93   </span></a> * #include &lt;assert.h&gt; 
+<a name="l94"><span class="ln">94   </span></a> * 
+<a name="l95"><span class="ln">95   </span></a> * JNIEXPORT void JNICALL 
+<a name="l96"><span class="ln">96   </span></a> * Java_MyCanvas_paint(JNIEnv* env, jobject canvas, jobject graphics) 
+<a name="l97"><span class="ln">97   </span></a> * { 
+<a name="l98"><span class="ln">98   </span></a> *     JAWT awt; 
+<a name="l99"><span class="ln">99   </span></a> *     JAWT_DrawingSurface* ds; 
+<a name="l100"><span class="ln">100  </span></a> *     JAWT_DrawingSurfaceInfo* dsi; 
+<a name="l101"><span class="ln">101  </span></a> *     JAWT_Win32DrawingSurfaceInfo* dsi_win; 
+<a name="l102"><span class="ln">102  </span></a> *     jboolean result; 
+<a name="l103"><span class="ln">103  </span></a> *     jint lock; 
+<a name="l104"><span class="ln">104  </span></a> * 
+<a name="l105"><span class="ln">105  </span></a> *     // Get the AWT. Request version 9 to access features in that release. 
+<a name="l106"><span class="ln">106  </span></a> *     awt.version = JAWT_VERSION_9; 
+<a name="l107"><span class="ln">107  </span></a> *     result = JAWT_GetAWT(env, &amp;awt); 
+<a name="l108"><span class="ln">108  </span></a> *     assert(result != JNI_FALSE); 
+<a name="l109"><span class="ln">109  </span></a> * 
+<a name="l110"><span class="ln">110  </span></a> *     // Get the drawing surface 
+<a name="l111"><span class="ln">111  </span></a> *     ds = awt.GetDrawingSurface(env, canvas); 
+<a name="l112"><span class="ln">112  </span></a> *     assert(ds != NULL); 
+<a name="l113"><span class="ln">113  </span></a> * 
+<a name="l114"><span class="ln">114  </span></a> *     // Lock the drawing surface 
+<a name="l115"><span class="ln">115  </span></a> *     lock = ds-&gt;Lock(ds); 
+<a name="l116"><span class="ln">116  </span></a> *     assert((lock &amp; JAWT_LOCK_ERROR) == 0); 
+<a name="l117"><span class="ln">117  </span></a> * 
+<a name="l118"><span class="ln">118  </span></a> *     // Get the drawing surface info 
+<a name="l119"><span class="ln">119  </span></a> *     dsi = ds-&gt;GetDrawingSurfaceInfo(ds); 
+<a name="l120"><span class="ln">120  </span></a> * 
+<a name="l121"><span class="ln">121  </span></a> *     // Get the platform-specific drawing info 
+<a name="l122"><span class="ln">122  </span></a> *     dsi_win = (JAWT_Win32DrawingSurfaceInfo*)dsi-&gt;platformInfo; 
+<a name="l123"><span class="ln">123  </span></a> * 
+<a name="l124"><span class="ln">124  </span></a> *     ////////////////////////////// 
+<a name="l125"><span class="ln">125  </span></a> *     // !!! DO PAINTING HERE !!! // 
+<a name="l126"><span class="ln">126  </span></a> *     ////////////////////////////// 
+<a name="l127"><span class="ln">127  </span></a> * 
+<a name="l128"><span class="ln">128  </span></a> *     // Free the drawing surface info 
+<a name="l129"><span class="ln">129  </span></a> *     ds-&gt;FreeDrawingSurfaceInfo(dsi); 
+<a name="l130"><span class="ln">130  </span></a> * 
+<a name="l131"><span class="ln">131  </span></a> *     // Unlock the drawing surface 
+<a name="l132"><span class="ln">132  </span></a> *     ds-&gt;Unlock(ds); 
+<a name="l133"><span class="ln">133  </span></a> * 
+<a name="l134"><span class="ln">134  </span></a> *     // Free the drawing surface 
+<a name="l135"><span class="ln">135  </span></a> *     awt.FreeDrawingSurface(ds); 
+<a name="l136"><span class="ln">136  </span></a> * } 
+<a name="l137"><span class="ln">137  </span></a> * 
+<a name="l138"><span class="ln">138  </span></a> </span><span class="s0">*/</span>
+<a name="l139"><span class="ln">139  </span></a>
+<a name="l140"><span class="ln">140  </span></a><span class="s0">/*</span>
+<a name="l141"><span class="ln">141  </span></a> <span class="s1">* JAWT_Rectangle 
+<a name="l142"><span class="ln">142  </span></a> * Structure for a native rectangle. 
+<a name="l143"><span class="ln">143  </span></a> </span><span class="s0">*/</span>
+<a name="l144"><span class="ln">144  </span></a><span class="s3">typedef struct </span><span class="s0">jawt_Rectangle {</span>
+<a name="l145"><span class="ln">145  </span></a>    <span class="s2">jint x</span><span class="s0">;</span>
+<a name="l146"><span class="ln">146  </span></a>    <span class="s2">jint y</span><span class="s0">;</span>
+<a name="l147"><span class="ln">147  </span></a>    <span class="s2">jint width</span><span class="s0">;</span>
+<a name="l148"><span class="ln">148  </span></a>    <span class="s2">jint height</span><span class="s0">;</span>
+<a name="l149"><span class="ln">149  </span></a><span class="s0">} JAWT_Rectangle;</span>
+<a name="l150"><span class="ln">150  </span></a>
+<a name="l151"><span class="ln">151  </span></a><span class="s3">struct </span><span class="s0">jawt_DrawingSurface;</span>
+<a name="l152"><span class="ln">152  </span></a>
+<a name="l153"><span class="ln">153  </span></a><span class="s0">/*</span>
+<a name="l154"><span class="ln">154  </span></a> <span class="s1">* JAWT_DrawingSurfaceInfo 
+<a name="l155"><span class="ln">155  </span></a> * Structure for containing the underlying drawing information of a component. 
+<a name="l156"><span class="ln">156  </span></a> </span><span class="s0">*/</span>
+<a name="l157"><span class="ln">157  </span></a><span class="s3">typedef struct </span><span class="s0">jawt_DrawingSurfaceInfo {</span>
+<a name="l158"><span class="ln">158  </span></a>    <span class="s0">/*</span>
+<a name="l159"><span class="ln">159  </span></a>     <span class="s1">* Pointer to the platform-specific information.  This can be safely 
+<a name="l160"><span class="ln">160  </span></a>     * cast to a JAWT_Win32DrawingSurfaceInfo on Windows or a 
+<a name="l161"><span class="ln">161  </span></a>     * JAWT_X11DrawingSurfaceInfo on Linux and Solaris. On Mac OS X this is a 
+<a name="l162"><span class="ln">162  </span></a>     * pointer to a NSObject that conforms to the JAWT_SurfaceLayers 
+<a name="l163"><span class="ln">163  </span></a>     * protocol. See jawt_md.h for details. 
+<a name="l164"><span class="ln">164  </span></a>     </span><span class="s0">*/</span>
+<a name="l165"><span class="ln">165  </span></a>    <span class="s3">void</span><span class="s0">* </span><span class="s2">platformInfo</span><span class="s0">;</span>
+<a name="l166"><span class="ln">166  </span></a>    <span class="s0">/* </span><span class="s1">Cached pointer to the underlying drawing surface </span><span class="s0">*/</span>
+<a name="l167"><span class="ln">167  </span></a>    <span class="s3">struct </span><span class="s0">jawt_DrawingSurface</span><span class="s3">* </span><span class="s0">ds;</span>
+<a name="l168"><span class="ln">168  </span></a>    <span class="s0">/* </span><span class="s1">Bounding rectangle of the drawing surface </span><span class="s0">*/</span>
+<a name="l169"><span class="ln">169  </span></a>    <span class="s2">JAWT_Rectangle bounds</span><span class="s0">;</span>
+<a name="l170"><span class="ln">170  </span></a>    <span class="s0">/* </span><span class="s1">Number of rectangles in the clip </span><span class="s0">*/</span>
+<a name="l171"><span class="ln">171  </span></a>    <span class="s2">jint clipSize</span><span class="s0">;</span>
+<a name="l172"><span class="ln">172  </span></a>    <span class="s0">/* </span><span class="s1">Clip rectangle array </span><span class="s0">*/</span>
+<a name="l173"><span class="ln">173  </span></a>    <span class="s2">JAWT_Rectangle</span><span class="s0">* </span><span class="s2">clip</span><span class="s0">;</span>
+<a name="l174"><span class="ln">174  </span></a><span class="s0">} JAWT_DrawingSurfaceInfo;</span>
+<a name="l175"><span class="ln">175  </span></a>
+<a name="l176"><span class="ln">176  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_LOCK_ERROR                 </span><span class="s3">0x</span><span class="s6">00000001</span>
+<a name="l177"><span class="ln">177  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_LOCK_CLIP_CHANGED          </span><span class="s3">0x</span><span class="s6">00000002</span>
+<a name="l178"><span class="ln">178  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_LOCK_BOUNDS_CHANGED        </span><span class="s3">0x</span><span class="s6">00000004</span>
+<a name="l179"><span class="ln">179  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_LOCK_SURFACE_CHANGED       </span><span class="s3">0x</span><span class="s6">00000008</span>
+<a name="l180"><span class="ln">180  </span></a>
+<a name="l181"><span class="ln">181  </span></a><span class="s0">/*</span>
+<a name="l182"><span class="ln">182  </span></a> <span class="s1">* JAWT_DrawingSurface 
+<a name="l183"><span class="ln">183  </span></a> * Structure for containing the underlying drawing information of a component. 
+<a name="l184"><span class="ln">184  </span></a> * All operations on a JAWT_DrawingSurface MUST be performed from the same 
+<a name="l185"><span class="ln">185  </span></a> * thread as the call to GetDrawingSurface. 
+<a name="l186"><span class="ln">186  </span></a> </span><span class="s0">*/</span>
+<a name="l187"><span class="ln">187  </span></a><span class="s3">typedef struct </span><span class="s0">jawt_DrawingSurface {</span>
+<a name="l188"><span class="ln">188  </span></a>    <span class="s0">/*</span>
+<a name="l189"><span class="ln">189  </span></a>     <span class="s1">* Cached reference to the Java environment of the calling thread. 
+<a name="l190"><span class="ln">190  </span></a>     * If Lock(), Unlock(), GetDrawingSurfaceInfo() or 
+<a name="l191"><span class="ln">191  </span></a>     * FreeDrawingSurfaceInfo() are called from a different thread, 
+<a name="l192"><span class="ln">192  </span></a>     * this data member should be set before calling those functions. 
+<a name="l193"><span class="ln">193  </span></a>     </span><span class="s0">*/</span>
+<a name="l194"><span class="ln">194  </span></a>    <span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">;</span>
+<a name="l195"><span class="ln">195  </span></a>    <span class="s0">/* </span><span class="s1">Cached reference to the target object </span><span class="s0">*/</span>
+<a name="l196"><span class="ln">196  </span></a>    <span class="s2">jobject target</span><span class="s0">;</span>
+<a name="l197"><span class="ln">197  </span></a>    <span class="s0">/*</span>
+<a name="l198"><span class="ln">198  </span></a>     <span class="s1">* Lock the surface of the target component for native rendering. 
+<a name="l199"><span class="ln">199  </span></a>     * When finished drawing, the surface must be unlocked with 
+<a name="l200"><span class="ln">200  </span></a>     * Unlock().  This function returns a bitmask with one or more of the 
+<a name="l201"><span class="ln">201  </span></a>     * following values: 
+<a name="l202"><span class="ln">202  </span></a>     * 
+<a name="l203"><span class="ln">203  </span></a>     * JAWT_LOCK_ERROR - When an error has occurred and the surface could not 
+<a name="l204"><span class="ln">204  </span></a>     * be locked. 
+<a name="l205"><span class="ln">205  </span></a>     * 
+<a name="l206"><span class="ln">206  </span></a>     * JAWT_LOCK_CLIP_CHANGED - When the clip region has changed. 
+<a name="l207"><span class="ln">207  </span></a>     * 
+<a name="l208"><span class="ln">208  </span></a>     * JAWT_LOCK_BOUNDS_CHANGED - When the bounds of the surface have changed. 
+<a name="l209"><span class="ln">209  </span></a>     * 
+<a name="l210"><span class="ln">210  </span></a>     * JAWT_LOCK_SURFACE_CHANGED - When the surface itself has changed 
+<a name="l211"><span class="ln">211  </span></a>     </span><span class="s0">*/</span>
+<a name="l212"><span class="ln">212  </span></a>    <span class="s4">jint </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">Lock</span><span class="s0">)</span>
+<a name="l213"><span class="ln">213  </span></a>        <span class="s0">(</span><span class="s3">struct </span><span class="s0">jawt_DrawingSurface</span><span class="s3">* </span><span class="s0">ds);</span>
+<a name="l214"><span class="ln">214  </span></a>    <span class="s0">/*</span>
+<a name="l215"><span class="ln">215  </span></a>     <span class="s1">* Get the drawing surface info. 
+<a name="l216"><span class="ln">216  </span></a>     * The value returned may be cached, but the values may change if 
+<a name="l217"><span class="ln">217  </span></a>     * additional calls to Lock() or Unlock() are made. 
+<a name="l218"><span class="ln">218  </span></a>     * Lock() must be called before this can return a valid value. 
+<a name="l219"><span class="ln">219  </span></a>     * Returns NULL if an error has occurred. 
+<a name="l220"><span class="ln">220  </span></a>     * When finished with the returned value, FreeDrawingSurfaceInfo must be 
+<a name="l221"><span class="ln">221  </span></a>     * called. 
+<a name="l222"><span class="ln">222  </span></a>     </span><span class="s0">*/</span>
+<a name="l223"><span class="ln">223  </span></a>    <span class="s2">JAWT_DrawingSurfaceInfo</span><span class="s0">* (</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">GetDrawingSurfaceInfo</span><span class="s0">)</span>
+<a name="l224"><span class="ln">224  </span></a>        <span class="s0">(</span><span class="s3">struct </span><span class="s0">jawt_DrawingSurface</span><span class="s3">* </span><span class="s0">ds);</span>
+<a name="l225"><span class="ln">225  </span></a>    <span class="s0">/*</span>
+<a name="l226"><span class="ln">226  </span></a>     <span class="s1">* Free the drawing surface info. 
+<a name="l227"><span class="ln">227  </span></a>     </span><span class="s0">*/</span>
+<a name="l228"><span class="ln">228  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">FreeDrawingSurfaceInfo</span><span class="s0">)</span>
+<a name="l229"><span class="ln">229  </span></a>        <span class="s0">(</span><span class="s2">JAWT_DrawingSurfaceInfo</span><span class="s0">* </span><span class="s2">dsi</span><span class="s0">);</span>
+<a name="l230"><span class="ln">230  </span></a>    <span class="s0">/*</span>
+<a name="l231"><span class="ln">231  </span></a>     <span class="s1">* Unlock the drawing surface of the target component for native rendering. 
+<a name="l232"><span class="ln">232  </span></a>     </span><span class="s0">*/</span>
+<a name="l233"><span class="ln">233  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">Unlock</span><span class="s0">)</span>
+<a name="l234"><span class="ln">234  </span></a>        <span class="s0">(</span><span class="s3">struct </span><span class="s0">jawt_DrawingSurface</span><span class="s3">* </span><span class="s0">ds);</span>
+<a name="l235"><span class="ln">235  </span></a><span class="s0">} JAWT_DrawingSurface;</span>
+<a name="l236"><span class="ln">236  </span></a>
+<a name="l237"><span class="ln">237  </span></a><span class="s0">/*</span>
+<a name="l238"><span class="ln">238  </span></a> <span class="s1">* JAWT 
+<a name="l239"><span class="ln">239  </span></a> * Structure for containing native AWT functions. 
+<a name="l240"><span class="ln">240  </span></a> </span><span class="s0">*/</span>
+<a name="l241"><span class="ln">241  </span></a><span class="s3">typedef struct </span><span class="s0">jawt {</span>
+<a name="l242"><span class="ln">242  </span></a>    <span class="s0">/*</span>
+<a name="l243"><span class="ln">243  </span></a>     <span class="s1">* Version of this structure.  This must always be set before 
+<a name="l244"><span class="ln">244  </span></a>     * calling JAWT_GetAWT(). It affects the functions returned. 
+<a name="l245"><span class="ln">245  </span></a>     * Must be one of the known pre-defined versions. 
+<a name="l246"><span class="ln">246  </span></a>     </span><span class="s0">*/</span>
+<a name="l247"><span class="ln">247  </span></a>    <span class="s2">jint version</span><span class="s0">;</span>
+<a name="l248"><span class="ln">248  </span></a>    <span class="s0">/*</span>
+<a name="l249"><span class="ln">249  </span></a>     <span class="s1">* Return a drawing surface from a target jobject.  This value 
+<a name="l250"><span class="ln">250  </span></a>     * may be cached. 
+<a name="l251"><span class="ln">251  </span></a>     * Returns NULL if an error has occurred. 
+<a name="l252"><span class="ln">252  </span></a>     * Target must be a java.awt.Component (should be a Canvas 
+<a name="l253"><span class="ln">253  </span></a>     * or Window for native rendering). 
+<a name="l254"><span class="ln">254  </span></a>     * FreeDrawingSurface() must be called when finished with the 
+<a name="l255"><span class="ln">255  </span></a>     * returned JAWT_DrawingSurface. 
+<a name="l256"><span class="ln">256  </span></a>     </span><span class="s0">*/</span>
+<a name="l257"><span class="ln">257  </span></a>    <span class="s2">JAWT_DrawingSurface</span><span class="s0">* (</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">GetDrawingSurface</span><span class="s0">)</span>
+<a name="l258"><span class="ln">258  </span></a>        <span class="s0">(</span><span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">, </span><span class="s2">jobject target</span><span class="s0">);</span>
+<a name="l259"><span class="ln">259  </span></a>    <span class="s0">/*</span>
+<a name="l260"><span class="ln">260  </span></a>     <span class="s1">* Free the drawing surface allocated in GetDrawingSurface. 
+<a name="l261"><span class="ln">261  </span></a>     </span><span class="s0">*/</span>
+<a name="l262"><span class="ln">262  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">FreeDrawingSurface</span><span class="s0">)</span>
+<a name="l263"><span class="ln">263  </span></a>        <span class="s0">(</span><span class="s2">JAWT_DrawingSurface</span><span class="s0">* </span><span class="s2">ds</span><span class="s0">);</span>
+<a name="l264"><span class="ln">264  </span></a>    <span class="s0">/*</span>
+<a name="l265"><span class="ln">265  </span></a>     <span class="s1">* Since 1.4 
+<a name="l266"><span class="ln">266  </span></a>     * Locks the entire AWT for synchronization purposes 
+<a name="l267"><span class="ln">267  </span></a>     </span><span class="s0">*/</span>
+<a name="l268"><span class="ln">268  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">Lock</span><span class="s0">)(</span><span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">);</span>
+<a name="l269"><span class="ln">269  </span></a>    <span class="s0">/*</span>
+<a name="l270"><span class="ln">270  </span></a>     <span class="s1">* Since 1.4 
+<a name="l271"><span class="ln">271  </span></a>     * Unlocks the entire AWT for synchronization purposes 
+<a name="l272"><span class="ln">272  </span></a>     </span><span class="s0">*/</span>
+<a name="l273"><span class="ln">273  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">Unlock</span><span class="s0">)(</span><span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">);</span>
+<a name="l274"><span class="ln">274  </span></a>    <span class="s0">/*</span>
+<a name="l275"><span class="ln">275  </span></a>     <span class="s1">* Since 1.4 
+<a name="l276"><span class="ln">276  </span></a>     * Returns a reference to a java.awt.Component from a native 
+<a name="l277"><span class="ln">277  </span></a>     * platform handle.  On Windows, this corresponds to an HWND; 
+<a name="l278"><span class="ln">278  </span></a>     * on Solaris and Linux, this is a Drawable.  For other platforms, 
+<a name="l279"><span class="ln">279  </span></a>     * see the appropriate machine-dependent header file for a description. 
+<a name="l280"><span class="ln">280  </span></a>     * The reference returned by this function is a local 
+<a name="l281"><span class="ln">281  </span></a>     * reference that is only valid in this environment. 
+<a name="l282"><span class="ln">282  </span></a>     * This function returns a NULL reference if no component could be 
+<a name="l283"><span class="ln">283  </span></a>     * found with matching platform information. 
+<a name="l284"><span class="ln">284  </span></a>     </span><span class="s0">*/</span>
+<a name="l285"><span class="ln">285  </span></a>    <span class="s4">jobject </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">GetComponent</span><span class="s0">)(</span><span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">, </span><span class="s3">void</span><span class="s0">* </span><span class="s2">platformInfo</span><span class="s0">);</span>
+<a name="l286"><span class="ln">286  </span></a>
+<a name="l287"><span class="ln">287  </span></a>    <span class="s0">/** 
+<a name="l288"><span class="ln">288  </span></a>     </span><span class="s1">* Since 9 
+<a name="l289"><span class="ln">289  </span></a>     * Creates a java.awt.Frame placed in a native container. Container is 
+<a name="l290"><span class="ln">290  </span></a>     * referenced by the native platform handle. For example on Windows this 
+<a name="l291"><span class="ln">291  </span></a>     * corresponds to an HWND. For other platforms, see the appropriate 
+<a name="l292"><span class="ln">292  </span></a>     * machine-dependent header file for a description. The reference returned 
+<a name="l293"><span class="ln">293  </span></a>     * by this function is a local reference that is only valid in this 
+<a name="l294"><span class="ln">294  </span></a>     * environment. This function returns a NULL reference if no frame could be 
+<a name="l295"><span class="ln">295  </span></a>     * created with matching platform information. 
+<a name="l296"><span class="ln">296  </span></a>     </span><span class="s0">*/</span>
+<a name="l297"><span class="ln">297  </span></a>    <span class="s4">jobject </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">CreateEmbeddedFrame</span><span class="s0">) (</span><span class="s2">JNIEnv </span><span class="s0">*</span><span class="s2">env</span><span class="s0">, </span><span class="s3">void</span><span class="s0">* </span><span class="s2">platformInfo</span><span class="s0">);</span>
+<a name="l298"><span class="ln">298  </span></a>
+<a name="l299"><span class="ln">299  </span></a>    <span class="s0">/** 
+<a name="l300"><span class="ln">300  </span></a>     </span><span class="s1">* Since 9 
+<a name="l301"><span class="ln">301  </span></a>     * Moves and resizes the embedded frame. The new location of the top-left 
+<a name="l302"><span class="ln">302  </span></a>     * corner is specified by x and y parameters relative to the native parent 
+<a name="l303"><span class="ln">303  </span></a>     * component. The new size is specified by width and height. 
+<a name="l304"><span class="ln">304  </span></a>     * 
+<a name="l305"><span class="ln">305  </span></a>     * The embedded frame should be created by CreateEmbeddedFrame() method, or 
+<a name="l306"><span class="ln">306  </span></a>     * this function will not have any effect. 
+<a name="l307"><span class="ln">307  </span></a>     * 
+<a name="l308"><span class="ln">308  </span></a>     * java.awt.Component.setLocation() and java.awt.Component.setBounds() for 
+<a name="l309"><span class="ln">309  </span></a>     * EmbeddedFrame really don't move it within the native parent. These 
+<a name="l310"><span class="ln">310  </span></a>     * methods always locate the embedded frame at (0, 0) for backward 
+<a name="l311"><span class="ln">311  </span></a>     * compatibility. To allow moving embedded frames this method was 
+<a name="l312"><span class="ln">312  </span></a>     * introduced, and it works just the same way as setLocation() and 
+<a name="l313"><span class="ln">313  </span></a>     * setBounds() for usual, non-embedded components. 
+<a name="l314"><span class="ln">314  </span></a>     * 
+<a name="l315"><span class="ln">315  </span></a>     * Using usual get/setLocation() and get/setBounds() together with this new 
+<a name="l316"><span class="ln">316  </span></a>     * method is not recommended. 
+<a name="l317"><span class="ln">317  </span></a>     </span><span class="s0">*/</span>
+<a name="l318"><span class="ln">318  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">SetBounds</span><span class="s0">) (</span><span class="s2">JNIEnv </span><span class="s0">*</span><span class="s2">env</span><span class="s0">, </span><span class="s2">jobject embeddedFrame</span><span class="s0">,</span>
+<a name="l319"><span class="ln">319  </span></a>            <span class="s2">jint x</span><span class="s0">, </span><span class="s2">jint y</span><span class="s0">, </span><span class="s2">jint w</span><span class="s0">, </span><span class="s2">jint h</span><span class="s0">);</span>
+<a name="l320"><span class="ln">320  </span></a>    <span class="s0">/** 
+<a name="l321"><span class="ln">321  </span></a>     </span><span class="s1">* Since 9 
+<a name="l322"><span class="ln">322  </span></a>     * Synthesize a native message to activate or deactivate an EmbeddedFrame 
+<a name="l323"><span class="ln">323  </span></a>     * window depending on the value of parameter doActivate, if &quot;true&quot; 
+<a name="l324"><span class="ln">324  </span></a>     * activates the window; otherwise, deactivates the window. 
+<a name="l325"><span class="ln">325  </span></a>     * 
+<a name="l326"><span class="ln">326  </span></a>     * The embedded frame should be created by CreateEmbeddedFrame() method, or 
+<a name="l327"><span class="ln">327  </span></a>     * this function will not have any effect. 
+<a name="l328"><span class="ln">328  </span></a>     </span><span class="s0">*/</span>
+<a name="l329"><span class="ln">329  </span></a>    <span class="s3">void </span><span class="s0">(</span><span class="s2">JNICALL </span><span class="s0">*</span><span class="s2">SynthesizeWindowActivation</span><span class="s0">) (</span><span class="s2">JNIEnv </span><span class="s0">*</span><span class="s2">env</span><span class="s0">,</span>
+<a name="l330"><span class="ln">330  </span></a>            <span class="s2">jobject embeddedFrame</span><span class="s0">, </span><span class="s2">jboolean doActivate</span><span class="s0">);</span>
+<a name="l331"><span class="ln">331  </span></a><span class="s0">} JAWT;</span>
+<a name="l332"><span class="ln">332  </span></a>
+<a name="l333"><span class="ln">333  </span></a><span class="s0">/*</span>
+<a name="l334"><span class="ln">334  </span></a> <span class="s1">* Get the AWT native structure.  This function returns JNI_FALSE if 
+<a name="l335"><span class="ln">335  </span></a> * an error occurs. 
+<a name="l336"><span class="ln">336  </span></a> </span><span class="s0">*/</span>
+<a name="l337"><span class="ln">337  </span></a><span class="s2">_JNI_IMPORT_OR_EXPORT_ 
+<a name="l338"><span class="ln">338  </span></a>jboolean JNICALL </span><span class="s4">JAWT_GetAWT</span><span class="s0">(</span><span class="s2">JNIEnv</span><span class="s0">* </span><span class="s2">env</span><span class="s0">, </span><span class="s2">JAWT</span><span class="s0">* </span><span class="s2">awt</span><span class="s0">);</span>
+<a name="l339"><span class="ln">339  </span></a>
+<a name="l340"><span class="ln">340  </span></a><span class="s0">/*</span>
+<a name="l341"><span class="ln">341  </span></a> <span class="s1">* Specify one of these constants as the JAWT.version 
+<a name="l342"><span class="ln">342  </span></a> * Specifying an earlier version will limit the available functions to 
+<a name="l343"><span class="ln">343  </span></a> * those provided in that earlier version of JAWT. 
+<a name="l344"><span class="ln">344  </span></a> * See the &quot;Since&quot; note on each API. Methods with no &quot;Since&quot; 
+<a name="l345"><span class="ln">345  </span></a> * may be presumed to be present in JAWT_VERSION_1_3. 
+<a name="l346"><span class="ln">346  </span></a> </span><span class="s0">*/</span>
+<a name="l347"><span class="ln">347  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_VERSION_1_3 </span><span class="s3">0x</span><span class="s6">00010003</span>
+<a name="l348"><span class="ln">348  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_VERSION_1_4 </span><span class="s3">0x</span><span class="s6">00010004</span>
+<a name="l349"><span class="ln">349  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_VERSION_1_7 </span><span class="s3">0x</span><span class="s6">00010007</span>
+<a name="l350"><span class="ln">350  </span></a><span class="s0">#</span><span class="s3">define </span><span class="s4">JAWT_VERSION_9 </span><span class="s3">0x</span><span class="s6">00090000</span>
+<a name="l351"><span class="ln">351  </span></a>
+<a name="l352"><span class="ln">352  </span></a><span class="s0">#</span><span class="s3">ifdef </span><span class="s0">__cplusplus</span>
+<a name="l353"><span class="ln">353  </span></a><span class="s0">} /* </span><span class="s1">extern &quot;C&quot; </span><span class="s0">*/</span>
+<a name="l354"><span class="ln">354  </span></a><span class="s0">#</span><span class="s3">endif</span>
+<a name="l355"><span class="ln">355  </span></a>
+<a name="l356"><span class="ln">356  </span></a><span class="s0">#</span><span class="s3">endif </span><span class="s0">/* </span><span class="s1">!_JAVASOFT_JAWT_H_ </span><span class="s0">*/</span>
+<a name="l357"><span class="ln">357  </span></a></pre>
+</body>
+</html>

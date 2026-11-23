@@ -16,10 +16,6 @@ import javafx.stage.Stage;
 
 import com.daoud.db.DatabaseManager_online;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.LocalDate;
@@ -82,6 +78,7 @@ public class ReportsContent {
         reportTitleLabel.getStyleClass().add("card-title");
 
         List<ReportRow> currentRows = new ArrayList<>();
+        boolean[] currentIsFactory = {true};
 
         Button viewBtn = new Button("عرض التقرير"); viewBtn.getStyleClass().add("btn-primary");
         Label viewMsg = new Label("");
@@ -119,6 +116,7 @@ public class ReportsContent {
                     rows -> {
                         currentRows.clear();
                         currentRows.addAll(rows);
+                        currentIsFactory[0] = isFactory;
                         updateReportHeader(reportHeader, isFactory);
                         reportTitleLabel.setText((isFactory ? "تقرير مصنع: " : "تقرير مورد: ") + entity +
                                 "   (من " + from + " لحد " + to + ")");
@@ -134,7 +132,7 @@ public class ReportsContent {
 
         exportBtn.setOnAction(e -> {
             Stage owner = (Stage) exportBtn.getScene().getWindow();
-            exportToCsv(owner, reportTitleLabel.getText(), currentRows);
+            exportToXlsx(owner, reportTitleLabel.getText(), currentRows, currentIsFactory[0]);
         });
 
         printBtn.setOnAction(e -> {
@@ -285,37 +283,89 @@ public class ReportsContent {
         );
     }
 
-    // ── تصدير التقرير لملف إكسيل (CSV بترميز UTF-8 عشان العربي يظهر صح) ──
-    private static void exportToCsv(Stage owner, String title, List<ReportRow> rows) {
+    // ── تصدير التقرير لملف إكسيل حقيقي (.xlsx) بدل CSV ──
+    // استخدمنا .xlsx بدل CSV عشان CSV بتتفتح غلط (كل البيانات في عمود واحد)
+    // على أي جهاز الفاصلة الافتراضية فيه مش "," (زي أجهزة كتير بالعربي بتبقى
+    // "؛")، بالإضافة إن .xlsx بيحافظ على تنسيق فعلي للأعمدة والعناوين.
+    private static void exportToXlsx(Stage owner, String title, List<ReportRow> rows, boolean isFactory) {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("حفظ التقرير");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel/CSV", "*.csv"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ملف إكسيل", "*.xlsx"));
         String safeName = title.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-        chooser.setInitialFileName((safeName.isEmpty() ? "تقرير" : safeName) + ".csv");
+        chooser.setInitialFileName((safeName.isEmpty() ? "تقرير" : safeName) + ".xlsx");
         File file = chooser.showSaveDialog(owner);
         if (file == null) return;
 
-        try (Writer w = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-            w.write('﻿'); // BOM عشان إكسيل يفتح العربي صح
-            w.write(title.replace(",", " ") + "\n\n");
-            w.write("التاريخ,الملاحظات,اسم المورد,الوزن القائم (كيلو),نسبة الخصم (%),كمية الخصم (كيلو),سعر الكيلو (جنيه),المبلغ (جنيه)\n");
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            org.apache.poi.ss.usermodel.Sheet sheet = wb.createSheet("تقرير");
+            sheet.setRightToLeft(true);
+
+            org.apache.poi.ss.usermodel.Font titleFont = wb.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 13);
+            org.apache.poi.ss.usermodel.CellStyle titleStyle = wb.createCellStyle();
+            titleStyle.setFont(titleFont);
+
+            org.apache.poi.ss.usermodel.Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            org.apache.poi.ss.usermodel.CellStyle headerStyle = wb.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+            org.apache.poi.ss.usermodel.CellStyle boldStyle = wb.createCellStyle();
+            boldStyle.setFont(headerFont);
+
+            int r = 0;
+            org.apache.poi.ss.usermodel.Row titleRow = sheet.createRow(r++);
+            org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue(title);
+            titleCell.setCellStyle(titleStyle);
+            r++; // صف فاضي
+
+            String[] cols = {"التاريخ", "الملاحظات", partyColumnTitle(isFactory), "الوزن القائم (كيلو)",
+                    "نسبة الخصم (%)", "كمية الخصم (كيلو)", "سعر الكيلو (جنيه)", "المبلغ (جنيه)"};
+            org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(r++);
+            for (int i = 0; i < cols.length; i++) {
+                org.apache.poi.ss.usermodel.Cell c = headerRow.createCell(i);
+                c.setCellValue(cols[i]);
+                c.setCellStyle(headerStyle);
+            }
+
             double totalGross = 0, totalAmount = 0;
             for (ReportRow row : rows) {
                 totalGross += row.grossWeight();
                 totalAmount += row.amount();
-                w.write(String.format("%s,%s,%s,%.1f,%.1f,%.1f,%.2f,%.0f\n",
-                        csv(row.date()), csv(row.notes()), csv(row.partyName()),
-                        row.grossWeight(), row.pct(), row.dedKg(), row.price(), row.amount()));
+                org.apache.poi.ss.usermodel.Row dataRow = sheet.createRow(r++);
+                dataRow.createCell(0).setCellValue(row.date());
+                dataRow.createCell(1).setCellValue(row.notes());
+                dataRow.createCell(2).setCellValue(row.partyName());
+                dataRow.createCell(3).setCellValue(row.grossWeight());
+                dataRow.createCell(4).setCellValue(row.pct());
+                dataRow.createCell(5).setCellValue(row.dedKg());
+                dataRow.createCell(6).setCellValue(row.price());
+                dataRow.createCell(7).setCellValue(row.amount());
             }
-            w.write("\nالإجمالي,,,," + String.format("%.1f", totalGross) + ",,," + String.format("%.0f", totalAmount) + "\n");
+
+            org.apache.poi.ss.usermodel.Row totalsRow = sheet.createRow(r);
+            org.apache.poi.ss.usermodel.Cell totalsLbl = totalsRow.createCell(0);
+            totalsLbl.setCellValue("الإجمالي");
+            totalsLbl.setCellStyle(boldStyle);
+            org.apache.poi.ss.usermodel.Cell totalsGrossCell = totalsRow.createCell(3);
+            totalsGrossCell.setCellValue(totalGross);
+            totalsGrossCell.setCellStyle(boldStyle);
+            org.apache.poi.ss.usermodel.Cell totalsAmountCell = totalsRow.createCell(7);
+            totalsAmountCell.setCellValue(totalAmount);
+            totalsAmountCell.setCellStyle(boldStyle);
+
+            for (int i = 0; i < cols.length; i++) sheet.autoSizeColumn(i);
+
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+                wb.write(out);
+            }
         } catch (Exception ex) {
             new Alert(Alert.AlertType.ERROR, "حصل خطأ أثناء حفظ الملف: " + ex.getMessage()).showAndWait();
         }
-    }
-
-    private static String csv(String s) {
-        if (s == null) return "";
-        return s.replace(",", " ");
     }
 
     // ── طباعة التقرير زي ما هو ظاهر على الشاشة ──

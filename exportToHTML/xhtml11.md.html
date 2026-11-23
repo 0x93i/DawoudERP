@@ -1,0 +1,88 @@
+<html>
+<head>
+<title>xhtml11.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+xhtml11.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">XHTML™ 1.1 - Module-based XHTML - Second Edition</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">W3C Document license</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s1">&lt;pre&gt;</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s1">From: https://www.w3.org/copyright/document-license-2023</span>
+<a name="l6"><span class="ln">6    </span></a>
+<a name="l7"><span class="ln">7    </span></a><span class="s1">Copied 10/15/2024</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">License</span>
+<a name="l10"><span class="ln">10   </span></a>
+<a name="l11"><span class="ln">11   </span></a><span class="s1">By using and/or copying this document, or the W3C document from which this</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s1">statement is linked, you (the licensee) agree that you have read, understood,</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s1">and will comply with the following terms and conditions:</span>
+<a name="l14"><span class="ln">14   </span></a>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">Permission to copy, and distribute the contents of this document, or the W3C</span>
+<a name="l16"><span class="ln">16   </span></a><span class="s1">document from which this statement is linked, in any medium for any purpose</span>
+<a name="l17"><span class="ln">17   </span></a><span class="s1">and without fee or royalty is hereby granted, provided that you include the</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s1">following on ALL copies of the document, or portions thereof, that you use:</span>
+<a name="l19"><span class="ln">19   </span></a>
+<a name="l20"><span class="ln">20   </span></a>    <span class="s1">A link or URL to the original W3C document.</span>
+<a name="l21"><span class="ln">21   </span></a>    <span class="s1">The pre-existing copyright notice of the original author, or if it doesn't</span>
+<a name="l22"><span class="ln">22   </span></a>    <span class="s1">exist, a notice (hypertext is preferred, but a textual representation is</span>
+<a name="l23"><span class="ln">23   </span></a>    <span class="s1">permitted) of the form: &quot;Copyright © [$date-of-document] World Wide Web</span>
+<a name="l24"><span class="ln">24   </span></a>    <span class="s1">Consortium. https://www.w3.org/copyright/document-license-2023/&quot;</span>
+<a name="l25"><span class="ln">25   </span></a>    <span class="s1">If it exists, the STATUS of the W3C document.</span>
+<a name="l26"><span class="ln">26   </span></a>
+<a name="l27"><span class="ln">27   </span></a><span class="s1">When space permits, inclusion of the full text of this NOTICE should be provided.</span>
+<a name="l28"><span class="ln">28   </span></a><span class="s1">We request that authorship attribution be provided in any software, documents,</span>
+<a name="l29"><span class="ln">29   </span></a><span class="s1">or other items or products that you create pursuant to the implementation of the</span>
+<a name="l30"><span class="ln">30   </span></a><span class="s1">contents of this document, or any portion thereof.</span>
+<a name="l31"><span class="ln">31   </span></a>
+<a name="l32"><span class="ln">32   </span></a><span class="s1">No right to create modifications or derivatives of W3C documents is granted</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s1">pursuant to this license, except as follows: To facilitate implementation of</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s1">the technical specifications set forth in this document, anyone may prepare</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s1">and distribute derivative works and portions of this document in software,</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s1">in supporting materials accompanying software, and in documentation of software,</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s1">PROVIDED that all such works include the notice below. HOWEVER, the publication</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s1">of derivative works of this document for use as a technical specification is</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s1">expressly prohibited.</span>
+<a name="l40"><span class="ln">40   </span></a>
+<a name="l41"><span class="ln">41   </span></a><span class="s1">In addition, &quot;Code Components&quot; —Web IDL in sections clearly marked as Web IDL;</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s1">and W3C-defined markup (HTML, CSS, etc.) and computer programming language code</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s1">clearly marked as code examples— are licensed under the W3C Software License.</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a><span class="s1">The notice is:</span>
+<a name="l46"><span class="ln">46   </span></a>
+<a name="l47"><span class="ln">47   </span></a><span class="s1">&quot;Copyright © 2023 W3C®. This software or document includes material copied from</span>
+<a name="l48"><span class="ln">48   </span></a><span class="s1">or derived from [title and URI of the W3C document].&quot;</span>
+<a name="l49"><span class="ln">49   </span></a>
+<a name="l50"><span class="ln">50   </span></a><span class="s1">Disclaimers</span>
+<a name="l51"><span class="ln">51   </span></a>
+<a name="l52"><span class="ln">52   </span></a><span class="s1">THIS DOCUMENT IS PROVIDED &quot;AS IS,&quot; AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS</span>
+<a name="l53"><span class="ln">53   </span></a><span class="s1">OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF</span>
+<a name="l54"><span class="ln">54   </span></a><span class="s1">MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, OR TITLE;</span>
+<a name="l55"><span class="ln">55   </span></a><span class="s1">THAT THE CONTENTS OF THE DOCUMENT ARE SUITABLE FOR ANY PURPOSE; NOR THAT THE</span>
+<a name="l56"><span class="ln">56   </span></a><span class="s1">IMPLEMENTATION OF SUCH CONTENTS WILL NOT INFRINGE ANY THIRD PARTY PATENTS,</span>
+<a name="l57"><span class="ln">57   </span></a><span class="s1">COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.</span>
+<a name="l58"><span class="ln">58   </span></a>
+<a name="l59"><span class="ln">59   </span></a><span class="s1">COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL OR</span>
+<a name="l60"><span class="ln">60   </span></a><span class="s1">CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE DOCUMENT OR THE PERFORMANCE</span>
+<a name="l61"><span class="ln">61   </span></a><span class="s1">OR IMPLEMENTATION OF THE CONTENTS THEREOF.</span>
+<a name="l62"><span class="ln">62   </span></a>
+<a name="l63"><span class="ln">63   </span></a><span class="s1">The name and trademarks of copyright holders may NOT be used in advertising or</span>
+<a name="l64"><span class="ln">64   </span></a><span class="s1">publicity pertaining to this document or its contents without specific, written</span>
+<a name="l65"><span class="ln">65   </span></a><span class="s1">prior permission. Title to copyright in this document will at all times remain</span>
+<a name="l66"><span class="ln">66   </span></a><span class="s1">with copyright holders.</span>
+<a name="l67"><span class="ln">67   </span></a>
+<a name="l68"><span class="ln">68   </span></a><span class="s1">&lt;/pre&gt;</span>
+<a name="l69"><span class="ln">69   </span></a></pre>
+</body>
+</html>

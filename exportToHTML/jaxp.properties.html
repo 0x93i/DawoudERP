@@ -1,0 +1,222 @@
+<html>
+<head>
+<title>jaxp.properties</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #808080;}
+.s4 { color: #6aab73;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+jaxp.properties</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">################################################################################</span>
+<a name="l2"><span class="ln">2    </span></a><span class="s0">#           JAXP Configuration File</span>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">#</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s0"># jaxp.properties (this file) is the default configuration file for JAXP, the API</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s0"># defined in the java.xml module. It is in java.util.Properties format and typically</span>
+<a name="l6"><span class="ln">6    </span></a><span class="s0"># located in the {java.home}/conf directory. It may contain key/value pairs for</span>
+<a name="l7"><span class="ln">7    </span></a><span class="s0"># specifying the implementation classes of JAXP factories and/or properties</span>
+<a name="l8"><span class="ln">8    </span></a><span class="s0"># that have corresponding system properties.</span>
+<a name="l9"><span class="ln">9    </span></a><span class="s0">#</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s0"># A user-specified configuration file can be set up using the system property</span>
+<a name="l11"><span class="ln">11   </span></a><span class="s0"># java.xml.config.file to override any or all of the entries in jaxp.properties.</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s0"># The following statement provides myConfigurationFile as a custom configuration</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s0"># file:</span>
+<a name="l14"><span class="ln">14   </span></a><span class="s0">#     java -Djava.xml.config.file=myConfigurationFile</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s0">################################################################################</span>
+<a name="l16"><span class="ln">16   </span></a>
+<a name="l17"><span class="ln">17   </span></a><span class="s0"># ---- JAXP Default Configuration ----</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s0">#</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s0"># The JAXP default configuration (jaxp.properties) contains entries for the</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s0"># Factory Lookup Mechanism and properties with corresponding system properties.</span>
+<a name="l21"><span class="ln">21   </span></a><span class="s0"># The values are generally set to the default values of the properties.</span>
+<a name="l22"><span class="ln">22   </span></a><span class="s0">#</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s0">#</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s0"># JAXP Lookup Mechanism:</span>
+<a name="l25"><span class="ln">25   </span></a><span class="s0">#</span>
+<a name="l26"><span class="ln">26   </span></a><span class="s0"># The JAXP configuration file ranks 2nd to the System Property in the precedent</span>
+<a name="l27"><span class="ln">27   </span></a><span class="s0"># order of the JAXP Lookup Mechanism. When the System Property is not specified,</span>
+<a name="l28"><span class="ln">28   </span></a><span class="s0"># a JAXP factory reads the configuration file in order to locate an implementation</span>
+<a name="l29"><span class="ln">29   </span></a><span class="s0"># class. If found, the class specified will be used as the factory implementation</span>
+<a name="l30"><span class="ln">30   </span></a><span class="s0"># class.</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s0">#</span>
+<a name="l32"><span class="ln">32   </span></a><span class="s0"># The format of an entry is key=value where the key is the fully qualified name</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s0"># of the factory and value that of the implementation class. The following entry</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s0"># sets a DocumentBuilderFactory implementation class:</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s0">#</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s0"># javax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s0">#</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s0">#</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s0"># Java SE and JDK Implementation Specific Properties:</span>
+<a name="l40"><span class="ln">40   </span></a><span class="s0">#</span>
+<a name="l41"><span class="ln">41   </span></a><span class="s0"># The JAXP configuration file ranks above the default settings in the Property</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s0"># Precedence in that its entries will override the default values of the corresponding</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s0"># properties.</span>
+<a name="l44"><span class="ln">44   </span></a><span class="s0">#</span>
+<a name="l45"><span class="ln">45   </span></a><span class="s0"># All properties that have System Properties defined in Java SE or supported</span>
+<a name="l46"><span class="ln">46   </span></a><span class="s0"># by the JDK Implementation can be placed in the configuration file to override</span>
+<a name="l47"><span class="ln">47   </span></a><span class="s0"># the default property values. The format is:</span>
+<a name="l48"><span class="ln">48   </span></a><span class="s0">#     system-property-name=value</span>
+<a name="l49"><span class="ln">49   </span></a><span class="s0">#</span>
+<a name="l50"><span class="ln">50   </span></a><span class="s0"># For example, the RESOLVE property in CatalogFeatures has an associated system</span>
+<a name="l51"><span class="ln">51   </span></a><span class="s0"># property called javax.xml.catalog.resolve. An entry for the RESOLVE property in the</span>
+<a name="l52"><span class="ln">52   </span></a><span class="s0"># configuration file therefore uses javax.xml.catalog.resolve as the key, that</span>
+<a name="l53"><span class="ln">53   </span></a><span class="s0"># is:</span>
+<a name="l54"><span class="ln">54   </span></a><span class="s0">#     javax.xml.catalog.resolve=strict</span>
+<a name="l55"><span class="ln">55   </span></a><span class="s0">#</span>
+<a name="l56"><span class="ln">56   </span></a><span class="s0">#</span>
+<a name="l57"><span class="ln">57   </span></a><span class="s0"># Extension Functions:</span>
+<a name="l58"><span class="ln">58   </span></a><span class="s0">#</span>
+<a name="l59"><span class="ln">59   </span></a><span class="s0"># This property determines whether XSLT and XPath extension functions are allowed.</span>
+<a name="l60"><span class="ln">60   </span></a><span class="s0"># The value type is boolean and the default value is false (disallowing</span>
+<a name="l61"><span class="ln">61   </span></a><span class="s0"># extension functions).</span>
+<a name="l62"><span class="ln">62   </span></a><span class="s0">#</span>
+<a name="l63"><span class="ln">63   </span></a><span class="s2">jdk.xml.enableExtensionFunctions</span><span class="s3">=</span><span class="s4">false</span>
+<a name="l64"><span class="ln">64   </span></a><span class="s0">#</span>
+<a name="l65"><span class="ln">65   </span></a><span class="s0">#</span>
+<a name="l66"><span class="ln">66   </span></a><span class="s0"># Overriding the default parser:</span>
+<a name="l67"><span class="ln">67   </span></a><span class="s0">#</span>
+<a name="l68"><span class="ln">68   </span></a><span class="s0"># This property allows a third party implementation to override the default</span>
+<a name="l69"><span class="ln">69   </span></a><span class="s0"># parser provided by the JDK. The value type is boolean and the default value is</span>
+<a name="l70"><span class="ln">70   </span></a><span class="s0"># false, disallowing overriding the default parser. The setting below reflects</span>
+<a name="l71"><span class="ln">71   </span></a><span class="s0"># the default property setting:</span>
+<a name="l72"><span class="ln">72   </span></a><span class="s0">#</span>
+<a name="l73"><span class="ln">73   </span></a><span class="s2">jdk.xml.overrideDefaultParser</span><span class="s3">=</span><span class="s4">false</span>
+<a name="l74"><span class="ln">74   </span></a><span class="s0">#</span>
+<a name="l75"><span class="ln">75   </span></a><span class="s0">#</span>
+<a name="l76"><span class="ln">76   </span></a><span class="s0"># External Access Properties:</span>
+<a name="l77"><span class="ln">77   </span></a><span class="s0">#</span>
+<a name="l78"><span class="ln">78   </span></a><span class="s0"># The External Access Properties are defined in javax.xml.XMLConstants. Their</span>
+<a name="l79"><span class="ln">79   </span></a><span class="s0"># system properties are javax.xml.accessExternalDTD, javax.xml.accessExternalSchema,</span>
+<a name="l80"><span class="ln">80   </span></a><span class="s0"># and javax.xml.accessExternalStylesheet. The values are a list of protocols separated</span>
+<a name="l81"><span class="ln">81   </span></a><span class="s0"># by comma, plus empty string (&quot;&quot;) to represent no protocol allowed and the key</span>
+<a name="l82"><span class="ln">82   </span></a><span class="s0"># word &quot;all&quot; for all access. The default is &quot;all&quot;, allowing all external resources</span>
+<a name="l83"><span class="ln">83   </span></a><span class="s0"># to be fetched. The followings are example of external access settings:</span>
+<a name="l84"><span class="ln">84   </span></a><span class="s0">#</span>
+<a name="l85"><span class="ln">85   </span></a><span class="s0"># allow local (file) DTDs to be retrieved</span>
+<a name="l86"><span class="ln">86   </span></a><span class="s0"># javax.xml.accessExternalDTD=file</span>
+<a name="l87"><span class="ln">87   </span></a><span class="s0">#</span>
+<a name="l88"><span class="ln">88   </span></a><span class="s0"># allow local (file) and remote (http) external schemas</span>
+<a name="l89"><span class="ln">89   </span></a><span class="s0"># javax.xml.accessExternalSchema=file, http</span>
+<a name="l90"><span class="ln">90   </span></a><span class="s0">#</span>
+<a name="l91"><span class="ln">91   </span></a><span class="s0"># reject any external stylesheets</span>
+<a name="l92"><span class="ln">92   </span></a><span class="s0"># javax.xml.accessExternalStylesheet=&quot;&quot;</span>
+<a name="l93"><span class="ln">93   </span></a><span class="s0">#</span>
+<a name="l94"><span class="ln">94   </span></a><span class="s0"># allow all external stylesheets</span>
+<a name="l95"><span class="ln">95   </span></a><span class="s0"># javax.xml.accessExternalStylesheet=&quot;all&quot;</span>
+<a name="l96"><span class="ln">96   </span></a><span class="s0">#</span>
+<a name="l97"><span class="ln">97   </span></a><span class="s0">#</span>
+<a name="l98"><span class="ln">98   </span></a><span class="s0"># Catalog Properties:</span>
+<a name="l99"><span class="ln">99   </span></a><span class="s0">#</span>
+<a name="l100"><span class="ln">100  </span></a><span class="s0"># The Catalog API defines four features: FILES, PREFER, DEFER and RESOLVE.</span>
+<a name="l101"><span class="ln">101  </span></a><span class="s0"># Except PREFER, all other properties can be placed in the configuration file</span>
+<a name="l102"><span class="ln">102  </span></a><span class="s0"># using the system properties defined for them.</span>
+<a name="l103"><span class="ln">103  </span></a><span class="s0">#</span>
+<a name="l104"><span class="ln">104  </span></a><span class="s0"># FILES: A semicolon-delimited list of URIs to locate the catalog files. The URIs</span>
+<a name="l105"><span class="ln">105  </span></a><span class="s0"># must be absolute and have a URL protocol handler for the URI scheme. The following</span>
+<a name="l106"><span class="ln">106  </span></a><span class="s0"># is an example of setting up a catalog file:</span>
+<a name="l107"><span class="ln">107  </span></a><span class="s0">#</span>
+<a name="l108"><span class="ln">108  </span></a><span class="s0"># javax.xml.catalog.files = file:///users/auser/catalog/catalog.xml</span>
+<a name="l109"><span class="ln">109  </span></a><span class="s0">#</span>
+<a name="l110"><span class="ln">110  </span></a><span class="s0"># DEFER: Indicates that the alternative catalogs including those specified in</span>
+<a name="l111"><span class="ln">111  </span></a><span class="s0"># delegate entries or nextCatalog are not read until they are needed. The value</span>
+<a name="l112"><span class="ln">112  </span></a><span class="s0"># is a boolean and the default value is true.</span>
+<a name="l113"><span class="ln">113  </span></a><span class="s0">#</span>
+<a name="l114"><span class="ln">114  </span></a><span class="s0"># javax.xml.catalog.defer=true</span>
+<a name="l115"><span class="ln">115  </span></a><span class="s0">#</span>
+<a name="l116"><span class="ln">116  </span></a><span class="s0"># RESOLVE: Determines the action if there is no matching entry found after all of</span>
+<a name="l117"><span class="ln">117  </span></a><span class="s0"># the specified catalogs are exhausted. The values are key words: strict, continue,</span>
+<a name="l118"><span class="ln">118  </span></a><span class="s0"># and ignore. The default is strict. The following setting reflects the default</span>
+<a name="l119"><span class="ln">119  </span></a><span class="s0"># setting.</span>
+<a name="l120"><span class="ln">120  </span></a><span class="s0">#</span>
+<a name="l121"><span class="ln">121  </span></a><span class="s0"># javax.xml.catalog.resolve=strict</span>
+<a name="l122"><span class="ln">122  </span></a><span class="s0">#</span>
+<a name="l123"><span class="ln">123  </span></a><span class="s0">#</span>
+<a name="l124"><span class="ln">124  </span></a><span class="s0"># useCatalog:</span>
+<a name="l125"><span class="ln">125  </span></a><span class="s0"># This property instructs XML processors to use XML Catalogs to resolve entity</span>
+<a name="l126"><span class="ln">126  </span></a><span class="s0"># references. The value is a boolean and the default value is true.</span>
+<a name="l127"><span class="ln">127  </span></a><span class="s0">#</span>
+<a name="l128"><span class="ln">128  </span></a><span class="s0"># javax.xml.useCatalog=true</span>
+<a name="l129"><span class="ln">129  </span></a><span class="s0">#</span>
+<a name="l130"><span class="ln">130  </span></a><span class="s0"># Implementation Specific Properties - jdkcatalog.resolve</span>
+<a name="l131"><span class="ln">131  </span></a><span class="s0">#</span>
+<a name="l132"><span class="ln">132  </span></a><span class="s0"># This property instructs the JDK default CatalogResolver to act in accordance with</span>
+<a name="l133"><span class="ln">133  </span></a><span class="s0"># the setting when unable to resolve an external reference with the built-in Catalog.</span>
+<a name="l134"><span class="ln">134  </span></a><span class="s0"># The options are:</span>
+<a name="l135"><span class="ln">135  </span></a><span class="s0">#     continue -- indicates that the processing should continue</span>
+<a name="l136"><span class="ln">136  </span></a><span class="s0">#     ignore -- indicates that the reference is skipped</span>
+<a name="l137"><span class="ln">137  </span></a><span class="s0">#     strict -- indicates that the resolver should throw a CatalogException</span>
+<a name="l138"><span class="ln">138  </span></a><span class="s0">#</span>
+<a name="l139"><span class="ln">139  </span></a><span class="s0"># The following setting allows the resolution to continue in cases where</span>
+<a name="l140"><span class="ln">140  </span></a><span class="s0"># external references are not resolved by a user-defined resolver or catalog if</span>
+<a name="l141"><span class="ln">141  </span></a><span class="s0"># any, and the built-in Catalog:</span>
+<a name="l142"><span class="ln">142  </span></a><span class="s2">jdk.xml.jdkcatalog.resolve</span><span class="s3">=</span><span class="s4">continue</span>
+<a name="l143"><span class="ln">143  </span></a><span class="s0">#</span>
+<a name="l144"><span class="ln">144  </span></a><span class="s0"># Implementation Specific Properties - DTD</span>
+<a name="l145"><span class="ln">145  </span></a><span class="s0">#</span>
+<a name="l146"><span class="ln">146  </span></a><span class="s0"># This property instructs the parsers to deny, ignore or allow DTD processing.</span>
+<a name="l147"><span class="ln">147  </span></a><span class="s0"># The following setting causes the parser to reject DTDs by throwing an exception.</span>
+<a name="l148"><span class="ln">148  </span></a><span class="s0"># jdk.xml.dtd.support=deny</span>
+<a name="l149"><span class="ln">149  </span></a><span class="s0">#</span>
+<a name="l150"><span class="ln">150  </span></a><span class="s0"># The following setting permits the processor to continue processing DTDs</span>
+<a name="l151"><span class="ln">151  </span></a><span class="s2">jdk.xml.dtd.support</span><span class="s3">=</span><span class="s4">allow</span>
+<a name="l152"><span class="ln">152  </span></a><span class="s0">#</span>
+<a name="l153"><span class="ln">153  </span></a><span class="s0"># Implementation Specific Properties - Limits</span>
+<a name="l154"><span class="ln">154  </span></a><span class="s0">#</span>
+<a name="l155"><span class="ln">155  </span></a><span class="s0"># Limits have a value type Integer. The values must be positive integers. Zero</span>
+<a name="l156"><span class="ln">156  </span></a><span class="s0"># means no limit.</span>
+<a name="l157"><span class="ln">157  </span></a><span class="s0">#</span>
+<a name="l158"><span class="ln">158  </span></a><span class="s0"># Limits the number of entity expansions. The default value is 2500</span>
+<a name="l159"><span class="ln">159  </span></a><span class="s2">jdk.xml.entityExpansionLimit</span><span class="s3">=</span><span class="s4">2500</span>
+<a name="l160"><span class="ln">160  </span></a><span class="s0">#</span>
+<a name="l161"><span class="ln">161  </span></a><span class="s0"># Limits the total size of all entities that include general and parameter entities.</span>
+<a name="l162"><span class="ln">162  </span></a><span class="s0"># The size is calculated as an aggregation of all entities. The default value is 100000.</span>
+<a name="l163"><span class="ln">163  </span></a><span class="s2">jdk.xml.totalEntitySizeLimit</span><span class="s3">=</span><span class="s4">100000</span>
+<a name="l164"><span class="ln">164  </span></a><span class="s0">#</span>
+<a name="l165"><span class="ln">165  </span></a><span class="s0"># Limits the maximum size of any general entities. The default value is 100000.</span>
+<a name="l166"><span class="ln">166  </span></a><span class="s2">jdk.xml.maxGeneralEntitySizeLimit</span><span class="s3">=</span><span class="s4">100000</span>
+<a name="l167"><span class="ln">167  </span></a><span class="s0">#</span>
+<a name="l168"><span class="ln">168  </span></a><span class="s0"># Limits the maximum size of any parameter entities, including the result of</span>
+<a name="l169"><span class="ln">169  </span></a><span class="s0"># nesting multiple parameter entities. The default value is 15000.</span>
+<a name="l170"><span class="ln">170  </span></a><span class="s2">jdk.xml.maxParameterEntitySizeLimit</span><span class="s3">=</span><span class="s4">15000</span>
+<a name="l171"><span class="ln">171  </span></a><span class="s0">#</span>
+<a name="l172"><span class="ln">172  </span></a><span class="s0"># Limits the total number of nodes in all entity references. The default value is 100000.</span>
+<a name="l173"><span class="ln">173  </span></a><span class="s2">jdk.xml.entityReplacementLimit</span><span class="s3">=</span><span class="s4">100000</span>
+<a name="l174"><span class="ln">174  </span></a><span class="s0">#</span>
+<a name="l175"><span class="ln">175  </span></a><span class="s0"># Limits the number of attributes an element can have. The default value is 200.</span>
+<a name="l176"><span class="ln">176  </span></a><span class="s2">jdk.xml.elementAttributeLimit</span><span class="s3">=</span><span class="s4">200</span>
+<a name="l177"><span class="ln">177  </span></a><span class="s0">#</span>
+<a name="l178"><span class="ln">178  </span></a><span class="s0"># Limits the number of content model nodes that may be created when building a</span>
+<a name="l179"><span class="ln">179  </span></a><span class="s0"># grammar for a W3C XML Schema that contains maxOccurs attributes with values</span>
+<a name="l180"><span class="ln">180  </span></a><span class="s0"># other than &quot;unbounded&quot;. The default value is 5000.</span>
+<a name="l181"><span class="ln">181  </span></a><span class="s2">jdk.xml.maxOccurLimit</span><span class="s3">=</span><span class="s4">5000</span>
+<a name="l182"><span class="ln">182  </span></a><span class="s0">#</span>
+<a name="l183"><span class="ln">183  </span></a><span class="s0"># Limits the maximum element depth. The default value is 100.</span>
+<a name="l184"><span class="ln">184  </span></a><span class="s2">jdk.xml.maxElementDepth</span><span class="s3">=</span><span class="s4">100</span>
+<a name="l185"><span class="ln">185  </span></a><span class="s0">#</span>
+<a name="l186"><span class="ln">186  </span></a><span class="s0"># Limits the maximum size of XML names, including element name, attribute name</span>
+<a name="l187"><span class="ln">187  </span></a><span class="s0"># and namespace prefix and URI. The default value is 1000.</span>
+<a name="l188"><span class="ln">188  </span></a><span class="s2">jdk.xml.maxXMLNameLimit</span><span class="s3">=</span><span class="s4">1000</span>
+<a name="l189"><span class="ln">189  </span></a><span class="s0">#</span>
+<a name="l190"><span class="ln">190  </span></a><span class="s0">#</span>
+<a name="l191"><span class="ln">191  </span></a><span class="s0"># XPath Limits</span>
+<a name="l192"><span class="ln">192  </span></a><span class="s0">#</span>
+<a name="l193"><span class="ln">193  </span></a><span class="s0"># Limits the number of groups an XPath expression can contain. The default value is 10.</span>
+<a name="l194"><span class="ln">194  </span></a><span class="s2">jdk.xml.xpathExprGrpLimit</span><span class="s3">=</span><span class="s4">10</span>
+<a name="l195"><span class="ln">195  </span></a><span class="s0">#</span>
+<a name="l196"><span class="ln">196  </span></a><span class="s0"># Limits the number of operators an XPath expression can contain. The default value is 100.</span>
+<a name="l197"><span class="ln">197  </span></a><span class="s2">jdk.xml.xpathExprOpLimit</span><span class="s3">=</span><span class="s4">100</span>
+<a name="l198"><span class="ln">198  </span></a><span class="s0">#</span>
+<a name="l199"><span class="ln">199  </span></a><span class="s0"># Limits the total number of XPath operators in an XSL Stylesheet. The default value is 10000.</span>
+<a name="l200"><span class="ln">200  </span></a><span class="s2">jdk.xml.xpathTotalOpLimit</span><span class="s3">=</span><span class="s4">10000</span>
+<a name="l201"><span class="ln">201  </span></a></pre>
+</body>
+</html>

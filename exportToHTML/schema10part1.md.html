@@ -1,0 +1,71 @@
+<html>
+<head>
+<title>schema10part1.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+schema10part1.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">XML Schema Part 1</span><span class="s1">: </span><span class="s2">Structures Second Edition</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">W3C Software and Document license</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s1">&lt;pre&gt;</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s1">Software and Document license - 2023 version</span>
+<a name="l6"><span class="ln">6    </span></a>
+<a name="l7"><span class="ln">7    </span></a><span class="s1">Copied from:  https://www.w3.org/copyright/software-license-2023</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">License</span>
+<a name="l10"><span class="ln">10   </span></a>
+<a name="l11"><span class="ln">11   </span></a><span class="s1">By obtaining and/or copying this work, you (the licensee) agree that you have</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s1">read, understood, and will comply with the following terms and conditions.</span>
+<a name="l13"><span class="ln">13   </span></a>
+<a name="l14"><span class="ln">14   </span></a><span class="s1">Permission to copy, modify, and distribute this work, with or without modification,</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">for any purpose and without fee or royalty is hereby granted, provided that you</span>
+<a name="l16"><span class="ln">16   </span></a><span class="s1">include the following on ALL copies of the work or portions thereof, including</span>
+<a name="l17"><span class="ln">17   </span></a><span class="s1">modifications:</span>
+<a name="l18"><span class="ln">18   </span></a>
+<a name="l19"><span class="ln">19   </span></a>    <span class="s1">The full text of this NOTICE in a location viewable to users of the</span>
+<a name="l20"><span class="ln">20   </span></a>    <span class="s1">redistributed or derivative work.</span>
+<a name="l21"><span class="ln">21   </span></a>    <span class="s1">Any pre-existing intellectual property disclaimers, notices, or terms and</span>
+<a name="l22"><span class="ln">22   </span></a>    <span class="s1">conditions. If none exist, the W3C software and document short notice should</span>
+<a name="l23"><span class="ln">23   </span></a>    <span class="s1">be included.</span>
+<a name="l24"><span class="ln">24   </span></a>    <span class="s1">Notice of any changes or modifications, through a copyright statement on the</span>
+<a name="l25"><span class="ln">25   </span></a>    <span class="s1">new code or document such as &quot;This software or document includes material</span>
+<a name="l26"><span class="ln">26   </span></a>    <span class="s1">copied from or derived from [title and URI of the W3C document]. Copyright ©</span>
+<a name="l27"><span class="ln">27   </span></a>    <span class="s1">[$year-of-document] World Wide Web Consortium.</span>
+<a name="l28"><span class="ln">28   </span></a>    <span class="s1">https://www.w3.org/copyright/software-license-2023/&quot;</span>
+<a name="l29"><span class="ln">29   </span></a>
+<a name="l30"><span class="ln">30   </span></a><span class="s1">Disclaimers</span>
+<a name="l31"><span class="ln">31   </span></a>
+<a name="l32"><span class="ln">32   </span></a><span class="s1">THIS WORK IS PROVIDED &quot;AS IS,&quot; AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS OR</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s1">WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO, WARRANTIES OF</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s1">MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s1">SOFTWARE OR DOCUMENT WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS,</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s1">TRADEMARKS OR OTHER RIGHTS.</span>
+<a name="l37"><span class="ln">37   </span></a>
+<a name="l38"><span class="ln">38   </span></a><span class="s1">COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL OR</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s1">CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR DOCUMENT.</span>
+<a name="l40"><span class="ln">40   </span></a>
+<a name="l41"><span class="ln">41   </span></a><span class="s1">The name and trademarks of copyright holders may NOT be used in advertising or</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s1">publicity pertaining to the work without specific, written prior permission.</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s1">Title to copyright in this work will at all times remain with copyright holders.</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a><span class="s1">------</span>
+<a name="l46"><span class="ln">46   </span></a>
+<a name="l47"><span class="ln">47   </span></a><span class="s1">Copyright © 2004 W3C® (MIT, ERCIM, Keio), All Rights Reserved. W3C liability,</span>
+<a name="l48"><span class="ln">48   </span></a><span class="s1">trademark and document use rules apply.</span>
+<a name="l49"><span class="ln">49   </span></a>
+<a name="l50"><span class="ln">50   </span></a>
+<a name="l51"><span class="ln">51   </span></a><span class="s1">&lt;/pre&gt;</span>
+<a name="l52"><span class="ln">52   </span></a></pre>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<html>
+<head>
+<title>xhtml10schema.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+xhtml10schema.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">XHTML™ 1.0 in XML Schema</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">W3C® Intellectual Rights Notice and Legal Disclaimers</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s1">&lt;pre&gt;</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s1">Copyright © 1994-2002 W3C ® (Massachusetts Institute of Technology,</span>
+<a name="l6"><span class="ln">6    </span></a><span class="s1">Institut National de Recherche en Informatique et en Automatique, Keio University),</span>
+<a name="l7"><span class="ln">7    </span></a><span class="s1">All Rights Reserved.</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">World Wide Web Consortium (W3C®) web site pages may contain other proprietary</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s1">notices and copyright information, the terms of which must be observed and</span>
+<a name="l11"><span class="ln">11   </span></a><span class="s1">followed. Specific notices do exist for W3C documents and software. Also, there</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s1">are specific usage policies associated with some of the W3C Icons. Please see</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s1">our Intellectual Rights FAQ for common questions about using materials from our site.</span>
+<a name="l14"><span class="ln">14   </span></a>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">Notice and Disclaimers</span>
+<a name="l16"><span class="ln">16   </span></a>
+<a name="l17"><span class="ln">17   </span></a><span class="s1">1. Unless otherwise noted, all materials contained in this Site are copyrighted</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s1">and may not be used except as provided in these terms and conditions or in the</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s1">copyright notice (documents and software) or other proprietary notice provided</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s1">with the relevant materials.</span>
+<a name="l21"><span class="ln">21   </span></a>
+<a name="l22"><span class="ln">22   </span></a><span class="s1">2. The materials contained in the Site may be downloaded or copied provided that</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s1">ALL copies retain the copyright and any other proprietary notices contained on</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s1">the materials. No material may be modified, edited or taken out of context such</span>
+<a name="l25"><span class="ln">25   </span></a><span class="s1">that its use creates a false or misleading statement or impression as to the</span>
+<a name="l26"><span class="ln">26   </span></a><span class="s1">positions, statements or actions of W3C.</span>
+<a name="l27"><span class="ln">27   </span></a>
+<a name="l28"><span class="ln">28   </span></a><span class="s1">3. The name and trademarks of copyright holders may NOT be used in advertising</span>
+<a name="l29"><span class="ln">29   </span></a><span class="s1">or publicity pertaining to the Web site, its content, specifications, or</span>
+<a name="l30"><span class="ln">30   </span></a><span class="s1">software without specific, written prior permission. Title to copyright in</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s1">Web site documents will at all times remain with copyright holders. Use of W3C</span>
+<a name="l32"><span class="ln">32   </span></a><span class="s1">trademarks and service marks is covered by the W3C Trademark and Servicemark</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s1">License.</span>
+<a name="l34"><span class="ln">34   </span></a>
+<a name="l35"><span class="ln">35   </span></a><span class="s1">4. Caches of W3C materials should comply with the &quot;maximum time to live&quot;</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s1">information provided with the materials. After such materials have expired</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s1">they should not be served from caches without first validating the contents</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s1">of the W3C Site. Organizations that want to mirror W3C content must abide by</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s1">the W3C Mirroring Policy.</span>
+<a name="l40"><span class="ln">40   </span></a>
+<a name="l41"><span class="ln">41   </span></a><span class="s1">W3C®Trademarks and Generic Terms</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s1">Trademarks owned by W3C host institutions on behalf of W3C and generic terms</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s1">used by the W3C</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a><span class="s1">5. The trademarks, logos, and service marks (collectively the &quot;Trademarks&quot;)</span>
+<a name="l46"><span class="ln">46   </span></a><span class="s1">displayed on the Site are registered and unregistered Trademarks of the</span>
+<a name="l47"><span class="ln">47   </span></a><span class="s1">Massachusetts Institute of Technology (MIT), Institut National de Recherche</span>
+<a name="l48"><span class="ln">48   </span></a><span class="s1">en Informatique et en Automatique (INRIA), or Keio University (Keio). All use</span>
+<a name="l49"><span class="ln">49   </span></a><span class="s1">of the W3C Trademarks is governed by the W3C Trademark and Servicemark License.</span>
+<a name="l50"><span class="ln">50   </span></a><span class="s1">No additional rights are granted by implication, estoppel, or otherwise. Terms</span>
+<a name="l51"><span class="ln">51   </span></a><span class="s1">which claimed as generic are not governed by any W3C license and are used as</span>
+<a name="l52"><span class="ln">52   </span></a><span class="s1">common descriptors by the W3C.</span>
+<a name="l53"><span class="ln">53   </span></a>
+<a name="l54"><span class="ln">54   </span></a><span class="s1">The following is a list of W3C terms claimed as a trademark or generic term</span>
+<a name="l55"><span class="ln">55   </span></a><span class="s1">by MIT, INRIA, and/or Keio on behalf of the W3C:</span>
+<a name="l56"><span class="ln">56   </span></a>
+<a name="l57"><span class="ln">57   </span></a>    <span class="s1">W3C®, World Wide Web Consortium  (registered in numerous countries)</span>
+<a name="l58"><span class="ln">58   </span></a>    <span class="s1">Amaya™, a Web Browser</span>
+<a name="l59"><span class="ln">59   </span></a>    <span class="s1">CSS™, Cascading Style Sheets Specification</span>
+<a name="l60"><span class="ln">60   </span></a>    <span class="s1">DOM™, Document Object Model</span>
+<a name="l61"><span class="ln">61   </span></a>    <span class="s1">HTML (generic), HyperText Markup Language</span>
+<a name="l62"><span class="ln">62   </span></a>    <span class="s1">HTTP (generic), Hypertext Transfer Protocol</span>
+<a name="l63"><span class="ln">63   </span></a>    <span class="s1">MathML™, Mathematical Markup Language</span>
+<a name="l64"><span class="ln">64   </span></a>    <span class="s1">Metadata (generic)</span>
+<a name="l65"><span class="ln">65   </span></a>    <span class="s1">P3P™, Platform for Privacy Preferences Project</span>
+<a name="l66"><span class="ln">66   </span></a>    <span class="s1">PICS™, Platform for Internet Content Selection</span>
+<a name="l67"><span class="ln">67   </span></a>    <span class="s1">RDF (generic), Resource Description Framework</span>
+<a name="l68"><span class="ln">68   </span></a>    <span class="s1">SMIL™, Synchronized Multimedia Integration Language</span>
+<a name="l69"><span class="ln">69   </span></a>    <span class="s1">SVG™, Scalable Vector Graphics</span>
+<a name="l70"><span class="ln">70   </span></a>    <span class="s1">WAI™, Web Accessibility Initiative</span>
+<a name="l71"><span class="ln">71   </span></a>    <span class="s1">XENC (generic), XML Encryption</span>
+<a name="l72"><span class="ln">72   </span></a>    <span class="s1">XHTML™, The Extensible HyperText Markup Language</span>
+<a name="l73"><span class="ln">73   </span></a>    <span class="s1">XML (generic), Extensible Markup Language</span>
+<a name="l74"><span class="ln">74   </span></a>    <span class="s1">XSL™,  Extensible Stylesheet Language</span>
+<a name="l75"><span class="ln">75   </span></a>
+<a name="l76"><span class="ln">76   </span></a>    <span class="s1">ACSS™, Aural Cascading Style Sheets</span>
+<a name="l77"><span class="ln">77   </span></a>    <span class="s1">DSig™, Digital Signature Initiative</span>
+<a name="l78"><span class="ln">78   </span></a>    <span class="s1">JEPI™, Joint Electronic Payment Initiative</span>
+<a name="l79"><span class="ln">79   </span></a>    <span class="s1">Jigsaw™</span>
+<a name="l80"><span class="ln">80   </span></a>    <span class="s1">PICSRules™</span>
+<a name="l81"><span class="ln">81   </span></a>    <span class="s1">WebFonts™</span>
+<a name="l82"><span class="ln">82   </span></a>
+<a name="l83"><span class="ln">83   </span></a><span class="s1">The absence of a product or service name or logo from this list does not</span>
+<a name="l84"><span class="ln">84   </span></a><span class="s1">constitute a waiver of MIT's, INRIA's, or Keio's trademark or other intellectual</span>
+<a name="l85"><span class="ln">85   </span></a><span class="s1">rights concerning that name or logo.</span>
+<a name="l86"><span class="ln">86   </span></a>
+<a name="l87"><span class="ln">87   </span></a><span class="s1">Any questions concerning the use, status, or standing of W3C trademarks should</span>
+<a name="l88"><span class="ln">88   </span></a><span class="s1">be directed to: site-policy@w3.org or to W3C (c/o Joseph Reagle), Laboratory</span>
+<a name="l89"><span class="ln">89   </span></a><span class="s1">for Computer Science NE43-358, Massachusetts Institute of Technology, 200</span>
+<a name="l90"><span class="ln">90   </span></a><span class="s1">Technology Square, Cambridge, MA 02139.</span>
+<a name="l91"><span class="ln">91   </span></a>
+<a name="l92"><span class="ln">92   </span></a><span class="s1">Non-W3C Trademarks; Member Trademarks</span>
+<a name="l93"><span class="ln">93   </span></a>
+<a name="l94"><span class="ln">94   </span></a><span class="s1">The trademarks, logos, and service marks not owned on behalf of the W3C and</span>
+<a name="l95"><span class="ln">95   </span></a><span class="s1">that are displayed on the Site are the registered and unregistered marks of</span>
+<a name="l96"><span class="ln">96   </span></a><span class="s1">their respective owners. No rights are granted by the W3C to use such marks,</span>
+<a name="l97"><span class="ln">97   </span></a><span class="s1">whether by implication, estoppel, or otherwise.</span>
+<a name="l98"><span class="ln">98   </span></a>
+<a name="l99"><span class="ln">99   </span></a><span class="s1">&quot;METADATA&quot; is a trademark of the Metadata Company. W3C uses the term &quot;metadata&quot;</span>
+<a name="l100"><span class="ln">100  </span></a><span class="s1">in a descriptive sense, meaning &quot;data about data&quot;. W3C is not in any way</span>
+<a name="l101"><span class="ln">101  </span></a><span class="s1">affiliated with the Metadata Company.</span>
+<a name="l102"><span class="ln">102  </span></a><span class="s1">Legal Disclaimers</span>
+<a name="l103"><span class="ln">103  </span></a>
+<a name="l104"><span class="ln">104  </span></a><span class="s1">6. W3C has not reviewed any or all of the web sites linked to this Site and is</span>
+<a name="l105"><span class="ln">105  </span></a><span class="s1">not responsible for the content of any off-site pages or any other web sites</span>
+<a name="l106"><span class="ln">106  </span></a><span class="s1">linked to this Site. Please understand that any non-W3C web site is independent</span>
+<a name="l107"><span class="ln">107  </span></a><span class="s1">from W3C, and W3C has no control over the content on that web site.</span>
+<a name="l108"><span class="ln">108  </span></a><span class="s1">In addition, a link to a non-W3C web site does not mean that W3C endorses or</span>
+<a name="l109"><span class="ln">109  </span></a><span class="s1">accepts any responsibility for the content, or the use, of such site. It is</span>
+<a name="l110"><span class="ln">110  </span></a><span class="s1">the user's responsibility to take precautions to ensure that whatever is</span>
+<a name="l111"><span class="ln">111  </span></a><span class="s1">selected is free of such items as viruses, worms, Trojan horses and other</span>
+<a name="l112"><span class="ln">112  </span></a><span class="s1">items of a destructive nature.</span>
+<a name="l113"><span class="ln">113  </span></a>
+<a name="l114"><span class="ln">114  </span></a><span class="s1">7. Information W3C publishes on its Site may contain references or cross</span>
+<a name="l115"><span class="ln">115  </span></a><span class="s1">references to W3C specifications, projects, programs and services that are</span>
+<a name="l116"><span class="ln">116  </span></a><span class="s1">not announced or available in your country. Such references do not imply that</span>
+<a name="l117"><span class="ln">117  </span></a><span class="s1">W3C intends to announce such specifications, projects, programs or services</span>
+<a name="l118"><span class="ln">118  </span></a><span class="s1">in your country.</span>
+<a name="l119"><span class="ln">119  </span></a>
+<a name="l120"><span class="ln">120  </span></a><span class="s1">8. Information on this Site may contain technical inaccuracies or typographical</span>
+<a name="l121"><span class="ln">121  </span></a><span class="s1">errors. Information may be changed or updated without notice. W3C may make</span>
+<a name="l122"><span class="ln">122  </span></a><span class="s1">improvements and/or changes in the materials contained in or described on this</span>
+<a name="l123"><span class="ln">123  </span></a><span class="s1">site at any time without notice. W3C may also make changes in these Terms and</span>
+<a name="l124"><span class="ln">124  </span></a><span class="s1">Conditions without notice. User is bound by such revisions and should therefore</span>
+<a name="l125"><span class="ln">125  </span></a><span class="s1">periodically visit this page to review the then current Terms and Conditions.</span>
+<a name="l126"><span class="ln">126  </span></a>
+<a name="l127"><span class="ln">127  </span></a><span class="s1">9. Limitation on Warranties.</span>
+<a name="l128"><span class="ln">128  </span></a>
+<a name="l129"><span class="ln">129  </span></a><span class="s1">ALL MATERIALS ON THE W3C SITE ARE PROVIDED &quot;AS IS.&quot; W3C, MIT, INRIA, AND KEIO</span>
+<a name="l130"><span class="ln">130  </span></a><span class="s1">MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING, BUT NOT</span>
+<a name="l131"><span class="ln">131  </span></a><span class="s1">LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,</span>
+<a name="l132"><span class="ln">132  </span></a><span class="s1">TITLE OR NON-INFRINGEMENT. AS TO DOCUMENTS AND GRAPHICS PUBLISHED ON THIS SITE,</span>
+<a name="l133"><span class="ln">133  </span></a><span class="s1">W3C, MIT, INRIA, AND KEIO MAKE NO REPRESENTATION OR WARRANTY THAT THE CONTENTS</span>
+<a name="l134"><span class="ln">134  </span></a><span class="s1">OF SUCH DOCUMENT OR GRAPHICS ARE FREE FROM ERROR OR SUITABLE FOR ANY PURPOSE;</span>
+<a name="l135"><span class="ln">135  </span></a><span class="s1">NOR THAT IMPLEMENTATION OF SUCH CONTENTS WILL NOT INFRINGE ANY THIRD PARTY</span>
+<a name="l136"><span class="ln">136  </span></a><span class="s1">PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.</span>
+<a name="l137"><span class="ln">137  </span></a>
+<a name="l138"><span class="ln">138  </span></a><span class="s1">Please note that some jurisdictions may not allow the exclusion of implied</span>
+<a name="l139"><span class="ln">139  </span></a> <span class="s1">warranties, so some of the above exclusions may not apply to you.</span>
+<a name="l140"><span class="ln">140  </span></a>
+<a name="l141"><span class="ln">141  </span></a><span class="s1">10. Limitation on Liability.</span>
+<a name="l142"><span class="ln">142  </span></a>
+<a name="l143"><span class="ln">143  </span></a><span class="s1">IN NO EVENT WILL W3C, MIT, INRIA, AND KEIO BE LIABLE TO ANY PARTY FOR ANY</span>
+<a name="l144"><span class="ln">144  </span></a><span class="s1">DIRECT, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES FOR ANY USE OF THIS SITE,</span>
+<a name="l145"><span class="ln">145  </span></a><span class="s1">OR ON ANY OTHER HYPERLINKED WEB SITE, INCLUDING, WITHOUT LIMITATION, ANY LOST</span>
+<a name="l146"><span class="ln">146  </span></a><span class="s1">PROFITS, BUSINESS INTERRUPTION, LOSS OF PROGRAMS OR OTHER DATA ON YOUR</span>
+<a name="l147"><span class="ln">147  </span></a><span class="s1">INFORMATION HANDLING SYSTEM OR OTHERWISE, EVEN IF W3C, MIT, INRIA, OR KEIO</span>
+<a name="l148"><span class="ln">148  </span></a><span class="s1">IS EXPRESSLY ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</span>
+<a name="l149"><span class="ln">149  </span></a>
+<a name="l150"><span class="ln">150  </span></a><span class="s1">&lt;/pre&gt;</span>
+<a name="l151"><span class="ln">151  </span></a></pre>
+</body>
+</html>

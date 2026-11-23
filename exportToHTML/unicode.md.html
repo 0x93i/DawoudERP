@@ -1,0 +1,290 @@
+<html>
+<head>
+<title>unicode.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+unicode.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">The Unicode Standard, Unicode Character Database, Version 17.0.0</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">Unicode Character Database</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s0">```</span>
+<a name="l5"><span class="ln">5    </span></a>
+<a name="l6"><span class="ln">6    </span></a><span class="s3">UNICODE LICENSE V3</span>
+<a name="l7"><span class="ln">7    </span></a>
+<a name="l8"><span class="ln">8    </span></a><span class="s3">COPYRIGHT AND PERMISSION NOTICE</span>
+<a name="l9"><span class="ln">9    </span></a>
+<a name="l10"><span class="ln">10   </span></a><span class="s3">Copyright © 1991-2025 Unicode, Inc.</span>
+<a name="l11"><span class="ln">11   </span></a>
+<a name="l12"><span class="ln">12   </span></a><span class="s3">NOTICE TO USER: Carefully read the following legal agreement. BY</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s3">DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR</span>
+<a name="l14"><span class="ln">14   </span></a><span class="s3">SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s3">TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT</span>
+<a name="l16"><span class="ln">16   </span></a><span class="s3">DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.</span>
+<a name="l17"><span class="ln">17   </span></a>
+<a name="l18"><span class="ln">18   </span></a><span class="s3">Permission is hereby granted, free of charge, to any person obtaining a</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s3">copy of data files and any associated documentation (the &quot;Data Files&quot;) or</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s3">software and any associated documentation (the &quot;Software&quot;) to deal in the</span>
+<a name="l21"><span class="ln">21   </span></a><span class="s3">Data Files or Software without restriction, including without limitation</span>
+<a name="l22"><span class="ln">22   </span></a><span class="s3">the rights to use, copy, modify, merge, publish, distribute, and/or sell</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s3">copies of the Data Files or Software, and to permit persons to whom the</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s3">Data Files or Software are furnished to do so, provided that either (a)</span>
+<a name="l25"><span class="ln">25   </span></a><span class="s3">this copyright and permission notice appear with all copies of the Data</span>
+<a name="l26"><span class="ln">26   </span></a><span class="s3">Files or Software, or (b) this copyright and permission notice appear in</span>
+<a name="l27"><span class="ln">27   </span></a><span class="s3">associated Documentation.</span>
+<a name="l28"><span class="ln">28   </span></a>
+<a name="l29"><span class="ln">29   </span></a><span class="s3">THE DATA FILES AND SOFTWARE ARE PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY</span>
+<a name="l30"><span class="ln">30   </span></a><span class="s3">KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s3">MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF</span>
+<a name="l32"><span class="ln">32   </span></a><span class="s3">THIRD PARTY RIGHTS.</span>
+<a name="l33"><span class="ln">33   </span></a>
+<a name="l34"><span class="ln">34   </span></a><span class="s3">IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s3">BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s3">OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s3">WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s3">ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s3">FILES OR SOFTWARE.</span>
+<a name="l40"><span class="ln">40   </span></a>
+<a name="l41"><span class="ln">41   </span></a><span class="s3">Except as contained in this notice, the name of a copyright holder shall</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s3">not be used in advertising or otherwise to promote the sale, use or other</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s3">dealings in these Data Files or Software without prior written</span>
+<a name="l44"><span class="ln">44   </span></a><span class="s3">authorization of the copyright holder.</span>
+<a name="l45"><span class="ln">45   </span></a>
+<a name="l46"><span class="ln">46   </span></a>
+<a name="l47"><span class="ln">47   </span></a><span class="s3">------------------</span>
+<a name="l48"><span class="ln">48   </span></a>
+<a name="l49"><span class="ln">49   </span></a><span class="s3">Unicode® Consortium Copyright, Terms of Use, and Licenses</span>
+<a name="l50"><span class="ln">50   </span></a>
+<a name="l51"><span class="ln">51   </span></a><span class="s3">Welcome to the website of Unicode, Inc. (dba The Unicode Consortium)</span>
+<a name="l52"><span class="ln">52   </span></a><span class="s3">(“Unicode”). Except as otherwise noted herein, these terms and conditions</span>
+<a name="l53"><span class="ln">53   </span></a><span class="s3">(“Terms of Use”) govern your use of the Unicode website and Unicode Products.</span>
+<a name="l54"><span class="ln">54   </span></a><span class="s3">Your use of this website and/or Unicode Products constitutes your agreement</span>
+<a name="l55"><span class="ln">55   </span></a><span class="s3">to follow and be bound by these Terms of Use. Unicode provides you with</span>
+<a name="l56"><span class="ln">56   </span></a><span class="s3">access to and use of this website and Unicode Products subject to your</span>
+<a name="l57"><span class="ln">57   </span></a><span class="s3">compliance with these Terms of Use. If you do not agree to these Terms</span>
+<a name="l58"><span class="ln">58   </span></a><span class="s3">of Use, you should not access or use this website or Unicode Products.</span>
+<a name="l59"><span class="ln">59   </span></a><span class="s3">Unicode reserves the right to make changes to the website, to Unicode</span>
+<a name="l60"><span class="ln">60   </span></a><span class="s3">Products, and to these Terms of Use at any time in its sole d iscretion.</span>
+<a name="l61"><span class="ln">61   </span></a>
+<a name="l62"><span class="ln">62   </span></a>    <span class="s3">1. Unicode Copyright: Copyright © 1991-Present Unicode, Inc.</span>
+<a name="l63"><span class="ln">63   </span></a>
+<a name="l64"><span class="ln">64   </span></a>    <span class="s3">2. Definitions</span>
+<a name="l65"><span class="ln">65   </span></a>
+<a name="l66"><span class="ln">66   </span></a>        <span class="s3">a. “Unicode Products” includes the Unicode website and its content,</span>
+<a name="l67"><span class="ln">67   </span></a>           <span class="s3">Data Files, Software, the Unicode Standard, all other Unicode</span>
+<a name="l68"><span class="ln">68   </span></a>           <span class="s3">standards, specifications, technical reports, technical notes,</span>
+<a name="l69"><span class="ln">69   </span></a>           <span class="s3">annexes, code charts, data files, software, publications,</span>
+<a name="l70"><span class="ln">70   </span></a>           <span class="s3">webinars, videos, course materials, online and in-person events,</span>
+<a name="l71"><span class="ln">71   </span></a>           <span class="s3">and all other Unicode products and services made available via</span>
+<a name="l72"><span class="ln">72   </span></a>           <span class="s3">this website or any other channel of distribution, including but</span>
+<a name="l73"><span class="ln">73   </span></a>           <span class="s3">not limited to Github, Maven, YouTube, and other third-party</span>
+<a name="l74"><span class="ln">74   </span></a>           <span class="s3">sites where Unicode maintains and provides products, materials,</span>
+<a name="l75"><span class="ln">75   </span></a>           <span class="s3">and services.</span>
+<a name="l76"><span class="ln">76   </span></a>
+<a name="l77"><span class="ln">77   </span></a>        <span class="s3">b. “Unicode Data Files” or &quot;Data Files&quot; include all computer data</span>
+<a name="l78"><span class="ln">78   </span></a>           <span class="s3">files under the following directories:</span>
+<a name="l79"><span class="ln">79   </span></a>
+<a name="l80"><span class="ln">80   </span></a>            <span class="s3">i. https://www.unicode.org/Public/</span>
+<a name="l81"><span class="ln">81   </span></a>           <span class="s3">ii. https://www.unicode.org/reports/</span>
+<a name="l82"><span class="ln">82   </span></a>          <span class="s3">iii. https://www.unicode.org/ivd/data/</span>
+<a name="l83"><span class="ln">83   </span></a>           <span class="s3">iv. https://github.com/unicode-org/</span>
+<a name="l84"><span class="ln">84   </span></a>
+<a name="l85"><span class="ln">85   </span></a>           <span class="s3">but exclude any materials present in the above directories that</span>
+<a name="l86"><span class="ln">86   </span></a>           <span class="s3">are not computer data files, such as PDF code charts and</span>
+<a name="l87"><span class="ln">87   </span></a>           <span class="s3">Technical Reports.</span>
+<a name="l88"><span class="ln">88   </span></a>
+<a name="l89"><span class="ln">89   </span></a>        <span class="s3">c. “Unicode Software” or &quot;Software&quot; includes any source code or</span>
+<a name="l90"><span class="ln">90   </span></a>           <span class="s3">compiled code in any Unicode Product including but not limited to</span>
+<a name="l91"><span class="ln">91   </span></a>           <span class="s3">the code included in the following directories:</span>
+<a name="l92"><span class="ln">92   </span></a>
+<a name="l93"><span class="ln">93   </span></a>            <span class="s3">i. https://www.unicode.org/Public/PROGRAMS/</span>
+<a name="l94"><span class="ln">94   </span></a>           <span class="s3">ii. https://www.unicode.org/Public/cldr/</span>
+<a name="l95"><span class="ln">95   </span></a>          <span class="s3">iii. https://github.com/unicode-org/</span>
+<a name="l96"><span class="ln">96   </span></a>
+<a name="l97"><span class="ln">97   </span></a>    <span class="s3">3. Permissions, Licenses, and Restrictions on Use</span>
+<a name="l98"><span class="ln">98   </span></a>
+<a name="l99"><span class="ln">99   </span></a>        <span class="s3">a. You are authorized to freely access and use this website and its</span>
+<a name="l100"><span class="ln">100  </span></a>           <span class="s3">content and all Unicode Products subject to these Terms of Use and</span>
+<a name="l101"><span class="ln">101  </span></a>           <span class="s3">subject to any restriction, permission, or license specifically</span>
+<a name="l102"><span class="ln">102  </span></a>           <span class="s3">associated with any specific material or content. No license is</span>
+<a name="l103"><span class="ln">103  </span></a>           <span class="s3">granted to copy or &quot;mirror&quot; this website. Linking to this website</span>
+<a name="l104"><span class="ln">104  </span></a>           <span class="s3">is permitted.</span>
+<a name="l105"><span class="ln">105  </span></a>
+<a name="l106"><span class="ln">106  </span></a>        <span class="s3">b. Except where otherwise more broadly permitted or licensed:</span>
+<a name="l107"><span class="ln">107  </span></a>
+<a name="l108"><span class="ln">108  </span></a>            <span class="s3">1. you may not make copies of or modifications to Unicode</span>
+<a name="l109"><span class="ln">109  </span></a>               <span class="s3">Products for public distribution, or incorporate Unicode</span>
+<a name="l110"><span class="ln">110  </span></a>               <span class="s3">Products in whole or in part into any product or publication,</span>
+<a name="l111"><span class="ln">111  </span></a>               <span class="s3">or otherwise publicly distribute them, without the express</span>
+<a name="l112"><span class="ln">112  </span></a>               <span class="s3">written permission of Unicode, and</span>
+<a name="l113"><span class="ln">113  </span></a>
+<a name="l114"><span class="ln">114  </span></a>            <span class="s3">2. you may not copy or extract fonts or font data from any</span>
+<a name="l115"><span class="ln">115  </span></a>               <span class="s3">Unicode Products, including but not limited to Unicode Code</span>
+<a name="l116"><span class="ln">116  </span></a>               <span class="s3">Charts.</span>
+<a name="l117"><span class="ln">117  </span></a>
+<a name="l118"><span class="ln">118  </span></a>        <span class="s3">c. All Unicode Data Files and Unicode Software are subject to the</span>
+<a name="l119"><span class="ln">119  </span></a>           <span class="s3">terms and conditions of the free and open-source Unicode License</span>
+<a name="l120"><span class="ln">120  </span></a>           <span class="s3">v3, unless otherwise indicated by specific restriction,</span>
+<a name="l121"><span class="ln">121  </span></a>           <span class="s3">permission, or license identified at the point of release or in</span>
+<a name="l122"><span class="ln">122  </span></a>           <span class="s3">such software, data file, or other documentation.</span>
+<a name="l123"><span class="ln">123  </span></a>
+<a name="l124"><span class="ln">124  </span></a>        <span class="s3">d. You may freely download and make copies of the Unicode® Standard</span>
+<a name="l125"><span class="ln">125  </span></a>           <span class="s3">Core Specification, Unicode Technical Reports, Unicode Technical</span>
+<a name="l126"><span class="ln">126  </span></a>           <span class="s3">Notes, Unicode Code Charts, and other portions of this website</span>
+<a name="l127"><span class="ln">127  </span></a>           <span class="s3">and may annotate and translate such permitted downloads and</span>
+<a name="l128"><span class="ln">128  </span></a>           <span class="s3">copies, provided that such downloads, copies, annotations, and</span>
+<a name="l129"><span class="ln">129  </span></a>           <span class="s3">translations are solely for personal or internal business</span>
+<a name="l130"><span class="ln">130  </span></a>           <span class="s3">purposes and not for public distribution, and further provided</span>
+<a name="l131"><span class="ln">131  </span></a>           <span class="s3">that any permitted copies and modifications fully reproduce all</span>
+<a name="l132"><span class="ln">132  </span></a>           <span class="s3">copyright and other legal notices contained in the original.</span>
+<a name="l133"><span class="ln">133  </span></a>           <span class="s3">Notwithstanding the foregoing, specific versions of the Unicode®</span>
+<a name="l134"><span class="ln">134  </span></a>           <span class="s3">Standard Core Specification, Unicode Technical Reports, Unicode</span>
+<a name="l135"><span class="ln">135  </span></a>           <span class="s3">Technical Notes, and Unicode Code Charts, as well as other Unicode</span>
+<a name="l136"><span class="ln">136  </span></a>           <span class="s3">publications, materials, and portions of this website may be</span>
+<a name="l137"><span class="ln">137  </span></a>           <span class="s3">subject to broader permissions and/or further reservations of</span>
+<a name="l138"><span class="ln">138  </span></a>           <span class="s3">rights and restrictions on use found in the title pages, cover</span>
+<a name="l139"><span class="ln">139  </span></a>           <span class="s3">sheets, front matter, and/or footnotes for each such version,</span>
+<a name="l140"><span class="ln">140  </span></a>           <span class="s3">report, chart, or other publication or material. Consult each</span>
+<a name="l141"><span class="ln">141  </span></a>           <span class="s3">version, report, chart, or other publication or material for any</span>
+<a name="l142"><span class="ln">142  </span></a>           <span class="s3">such permissions and further reservations of rights and</span>
+<a name="l143"><span class="ln">143  </span></a>           <span class="s3">restrictions on use.</span>
+<a name="l144"><span class="ln">144  </span></a>
+<a name="l145"><span class="ln">145  </span></a>    <span class="s3">4. Restricted Rights Legend. Any Unicode Data Files or Software that are</span>
+<a name="l146"><span class="ln">146  </span></a>       <span class="s3">licensed to the United States of America, its agencies and/or</span>
+<a name="l147"><span class="ln">147  </span></a>       <span class="s3">instrumentalities under these Terms of Use is commercial technical</span>
+<a name="l148"><span class="ln">148  </span></a>       <span class="s3">data or commercial computer software developed exclusively at private</span>
+<a name="l149"><span class="ln">149  </span></a>       <span class="s3">expense as defined in FAR 2.101, or DFARS 252.227-7014, as applicable.</span>
+<a name="l150"><span class="ln">150  </span></a>       <span class="s3">For Unicode Data Files, use, duplication, or disclosure by the</span>
+<a name="l151"><span class="ln">151  </span></a>       <span class="s3">Government is subject to restrictions as set forth in DFARS</span>
+<a name="l152"><span class="ln">152  </span></a>       <span class="s3">202.227-7015 Technical Data, Commercial and Items and these Terms of</span>
+<a name="l153"><span class="ln">153  </span></a>       <span class="s3">Use. For Unicode Software, in accordance with FAR 12-212 or DFARS</span>
+<a name="l154"><span class="ln">154  </span></a>       <span class="s3">227-7202, as applicable, use, duplication or disclosure by the</span>
+<a name="l155"><span class="ln">155  </span></a>       <span class="s3">Government is subject to the restrictions set forth in these Terms</span>
+<a name="l156"><span class="ln">156  </span></a>       <span class="s3">of Use.</span>
+<a name="l157"><span class="ln">157  </span></a>
+<a name="l158"><span class="ln">158  </span></a>    <span class="s3">5. Disclaimer of Warranties &amp; Limitation of Liability</span>
+<a name="l159"><span class="ln">159  </span></a>
+<a name="l160"><span class="ln">160  </span></a>        <span class="s3">a. This website and the Unicode Products are provided “AS-IS” without</span>
+<a name="l161"><span class="ln">161  </span></a>           <span class="s3">charge as a convenience to visitors and users. While Unicode</span>
+<a name="l162"><span class="ln">162  </span></a>           <span class="s3">attempts to provide accurate, error-free, and timely information,</span>
+<a name="l163"><span class="ln">163  </span></a>           <span class="s3">there may be technical or factual inaccuracies and typographical</span>
+<a name="l164"><span class="ln">164  </span></a>           <span class="s3">or other errors in this website and in the Unicode Products.</span>
+<a name="l165"><span class="ln">165  </span></a>           <span class="s3">Unicode reserves the right to make corrections and changes to the</span>
+<a name="l166"><span class="ln">166  </span></a>           <span class="s3">website and the Unicode Products at any time without notice.</span>
+<a name="l167"><span class="ln">167  </span></a>
+<a name="l168"><span class="ln">168  </span></a>        <span class="s3">b. YOU ASSUME ALL RESPONSIBILITY AND RISK WITH RESPECT TO YOUR USE</span>
+<a name="l169"><span class="ln">169  </span></a>           <span class="s3">OF THIS WEBSITE AND THE UNICODE PRODUCTS, WHICH ARE PROVIDED &quot;AS</span>
+<a name="l170"><span class="ln">170  </span></a>           <span class="s3">IS&quot; WITHOUT WARRANTY OF ANY KIND EITHER EXPRESS, IMPLIED, OR</span>
+<a name="l171"><span class="ln">171  </span></a>           <span class="s3">STATUTORY, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF</span>
+<a name="l172"><span class="ln">172  </span></a>           <span class="s3">ACCURACY, COMPLETENESS, TITLE, MERCHANTABILITY, FITNESS FOR A</span>
+<a name="l173"><span class="ln">173  </span></a>           <span class="s3">PARTICULAR PURPOSE, OR NON-INFRINGEMENT OF THIRD PARTY RIGHTS.</span>
+<a name="l174"><span class="ln">174  </span></a>           <span class="s3">UNICODE AND ITS LICENSORS AND CONTRIBUTORS ASSUME NO</span>
+<a name="l175"><span class="ln">175  </span></a>           <span class="s3">RESPONSIBILITY FOR ERRORS OR OMISSIONS IN THIS WEBSITE AND/OR THE</span>
+<a name="l176"><span class="ln">176  </span></a>           <span class="s3">UNICODE PRODUCTS. IF YOU ARE DISSATISFIED WITH THIS WEBSITE OR THE</span>
+<a name="l177"><span class="ln">177  </span></a>           <span class="s3">UNICODE PRODUCTS, YOUR SOLE REMEDY IS TO DISCONTINUE USE OF THE</span>
+<a name="l178"><span class="ln">178  </span></a>           <span class="s3">WEBSITE AND THE UNICODE PRODUCTS.</span>
+<a name="l179"><span class="ln">179  </span></a>
+<a name="l180"><span class="ln">180  </span></a>        <span class="s3">c. IN NO EVENT SHALL UNICODE, ITS MEMBERS, OR ITS LICENSORS OR</span>
+<a name="l181"><span class="ln">181  </span></a>           <span class="s3">CONTRIBUTORS BE LIABLE FOR ANY CLAIM OR DAMAGES WHATSOEVER OF ANY</span>
+<a name="l182"><span class="ln">182  </span></a>           <span class="s3">KIND, WHETHER DIRECT, INDIRECT, SPECIAL, INCIDENTAL,</span>
+<a name="l183"><span class="ln">183  </span></a>           <span class="s3">CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, WHETHER OR NOT</span>
+<a name="l184"><span class="ln">184  </span></a>           <span class="s3">UNICODE WAS ADVISED OF THE POSSIBILITY OF SUCH DAMAGE, INCLUDING</span>
+<a name="l185"><span class="ln">185  </span></a>           <span class="s3">BUT NOT LIMITED TO DAMAGE RESULTING FROM LOSS OF USE, DATA, OR</span>
+<a name="l186"><span class="ln">186  </span></a>           <span class="s3">PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE, OR OTHER</span>
+<a name="l187"><span class="ln">187  </span></a>           <span class="s3">TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE,</span>
+<a name="l188"><span class="ln">188  </span></a>           <span class="s3">INABILITY TO USE, PERFORMANCE, FUNCTIONALITY, MODIFICATION, OR</span>
+<a name="l189"><span class="ln">189  </span></a>           <span class="s3">DISTRIBUTION OF THIS WEBSITE, THE UNICODE PRODUCTS, OR ANY</span>
+<a name="l190"><span class="ln">190  </span></a>           <span class="s3">DERIVATIVES THEREOF.</span>
+<a name="l191"><span class="ln">191  </span></a>
+<a name="l192"><span class="ln">192  </span></a>        <span class="s3">d. Unicode makes no warranties or representations of any kind</span>
+<a name="l193"><span class="ln">193  </span></a>           <span class="s3">regarding any non-Unicode sites to which you may be directed or</span>
+<a name="l194"><span class="ln">194  </span></a>           <span class="s3">hyperlinked from this website. Hyperlinks are included solely for</span>
+<a name="l195"><span class="ln">195  </span></a>           <span class="s3">your convenience and Unicode makes no warranties or</span>
+<a name="l196"><span class="ln">196  </span></a>           <span class="s3">representations with regard to the accuracy, availability,</span>
+<a name="l197"><span class="ln">197  </span></a>           <span class="s3">suitability, or safety of information, products, or services</span>
+<a name="l198"><span class="ln">198  </span></a>           <span class="s3">provided on such non-Unicode sites.</span>
+<a name="l199"><span class="ln">199  </span></a>
+<a name="l200"><span class="ln">200  </span></a>    <span class="s3">6. Intellectual Property Contributions to Unicode. All contributions or</span>
+<a name="l201"><span class="ln">201  </span></a>       <span class="s3">submissions to Unicode are governed by The Unicode Consortium</span>
+<a name="l202"><span class="ln">202  </span></a>       <span class="s3">Intellectual Property, Licensing &amp; Technical Contribution Policies.</span>
+<a name="l203"><span class="ln">203  </span></a>       <span class="s3">If you wish to make any contribution or submission to Unicode, refer</span>
+<a name="l204"><span class="ln">204  </span></a>       <span class="s3">to the foregoing Policies for further information on how to do so.</span>
+<a name="l205"><span class="ln">205  </span></a>       <span class="s3">In the absence of a signed contributor license or other agreement with</span>
+<a name="l206"><span class="ln">206  </span></a>       <span class="s3">Unicode that expressly governs a particular contribution or</span>
+<a name="l207"><span class="ln">207  </span></a>       <span class="s3">submission, the act of making a contribution or submission of any kind</span>
+<a name="l208"><span class="ln">208  </span></a>       <span class="s3">to Unicode by any communication channel constitutes a binding legal</span>
+<a name="l209"><span class="ln">209  </span></a>       <span class="s3">agreement by the contributor or submitter that they:</span>
+<a name="l210"><span class="ln">210  </span></a>
+<a name="l211"><span class="ln">211  </span></a>            <span class="s3">a. represent and agree that the contributed matter is not</span>
+<a name="l212"><span class="ln">212  </span></a>               <span class="s3">proprietary or confidential to the contributor or any third</span>
+<a name="l213"><span class="ln">213  </span></a>               <span class="s3">party, and</span>
+<a name="l214"><span class="ln">214  </span></a>
+<a name="l215"><span class="ln">215  </span></a>            <span class="s3">b. grant to Unicode and to recipients of products distributed by</span>
+<a name="l216"><span class="ln">216  </span></a>               <span class="s3">Unicode a perpetual, irrevocable, unrestricted, worldwide,</span>
+<a name="l217"><span class="ln">217  </span></a>               <span class="s3">nonexclusive, no-charge, royalty-free license, without</span>
+<a name="l218"><span class="ln">218  </span></a>               <span class="s3">obligation for accounting, to reproduce, prepare derivative</span>
+<a name="l219"><span class="ln">219  </span></a>               <span class="s3">works of, publicly display, publicly perform, distribute,</span>
+<a name="l220"><span class="ln">220  </span></a>               <span class="s3">make, use, sell, offer to sell, or import that matter for any</span>
+<a name="l221"><span class="ln">221  </span></a>               <span class="s3">purpose, with the unrestricted right to sublicense those</span>
+<a name="l222"><span class="ln">222  </span></a>               <span class="s3">rights.</span>
+<a name="l223"><span class="ln">223  </span></a>
+<a name="l224"><span class="ln">224  </span></a>    <span class="s3">7. Compliance with Unicode Policies. These Terms of Use hereby</span>
+<a name="l225"><span class="ln">225  </span></a>       <span class="s3">incorporate by reference the following Unicode Policies. Your use of</span>
+<a name="l226"><span class="ln">226  </span></a>       <span class="s3">this website and/or Unicode Products and/or your participation in</span>
+<a name="l227"><span class="ln">227  </span></a>       <span class="s3">Unicode activities constitutes your agreement to these Policies</span>
+<a name="l228"><span class="ln">228  </span></a>       <span class="s3">which may be modified at any time in Unicode’s sole discretion:</span>
+<a name="l229"><span class="ln">229  </span></a>
+<a name="l230"><span class="ln">230  </span></a>        <span class="s3">a. The Unicode Consortium Code of Conduct</span>
+<a name="l231"><span class="ln">231  </span></a>        <span class="s3">b. The Unicode Consortium Antitrust Policy &amp; Guidelines</span>
+<a name="l232"><span class="ln">232  </span></a>        <span class="s3">c. The Unicode Consortium Intellectual Property, Licensing &amp;</span>
+<a name="l233"><span class="ln">233  </span></a>           <span class="s3">Technical Contribution Policies</span>
+<a name="l234"><span class="ln">234  </span></a>        <span class="s3">d. The Unicode Consortium Name and Trademark Usage Policy</span>
+<a name="l235"><span class="ln">235  </span></a>        <span class="s3">e. The Unicode Consortium Policy on Handling of Confidential</span>
+<a name="l236"><span class="ln">236  </span></a>           <span class="s3">Business Data</span>
+<a name="l237"><span class="ln">237  </span></a>        <span class="s3">f. The Unicode Consortium General Privacy Policy</span>
+<a name="l238"><span class="ln">238  </span></a>        <span class="s3">g. The Unicode Technical Group Procedures</span>
+<a name="l239"><span class="ln">239  </span></a>
+<a name="l240"><span class="ln">240  </span></a>    <span class="s3">8. Trademarks &amp; Logos. The Unicode Word Mark and the Unicode Logo are</span>
+<a name="l241"><span class="ln">241  </span></a>       <span class="s3">trademarks of Unicode, Inc. “The Unicode Consortium'' and “Unicode,</span>
+<a name="l242"><span class="ln">242  </span></a>       <span class="s3">Inc.” are trade names of Unicode, Inc. You hereby acknowledge and</span>
+<a name="l243"><span class="ln">243  </span></a>       <span class="s3">agree to respect Unicode’s exclusive worldwide rights in the Unicode</span>
+<a name="l244"><span class="ln">244  </span></a>       <span class="s3">Word Mark, the Unicode Logo, and the Unicode trade names. The Unicode</span>
+<a name="l245"><span class="ln">245  </span></a>       <span class="s3">Consortium Name and Trademark Usage Policy is incorporated herein by</span>
+<a name="l246"><span class="ln">246  </span></a>       <span class="s3">reference and you agree to abide by its provisions, which may be</span>
+<a name="l247"><span class="ln">247  </span></a>       <span class="s3">changed from time to time in Unicode’s sole discretion.</span>
+<a name="l248"><span class="ln">248  </span></a>
+<a name="l249"><span class="ln">249  </span></a>    <span class="s3">9. Jurisdiction and Venue. This website is operated from, and the</span>
+<a name="l250"><span class="ln">250  </span></a>       <span class="s3">Unicode Products are made available from, locations in the United</span>
+<a name="l251"><span class="ln">251  </span></a>       <span class="s3">States of America. Unicode makes no representation that this website</span>
+<a name="l252"><span class="ln">252  </span></a>       <span class="s3">or Unicode Products are appropriate for use in other locations. If</span>
+<a name="l253"><span class="ln">253  </span></a>       <span class="s3">you access this website or the Unicode Products from other locations,</span>
+<a name="l254"><span class="ln">254  </span></a>       <span class="s3">you are responsible for compliance with local laws. These Terms of</span>
+<a name="l255"><span class="ln">255  </span></a>       <span class="s3">Use, all use of this website and Unicode Products, and any claims and</span>
+<a name="l256"><span class="ln">256  </span></a>       <span class="s3">damages resulting from use of this website or Unicode Products, are</span>
+<a name="l257"><span class="ln">257  </span></a>       <span class="s3">governed by the applicable laws of the United States of America and</span>
+<a name="l258"><span class="ln">258  </span></a>       <span class="s3">the State of California without regard to any principles which would</span>
+<a name="l259"><span class="ln">259  </span></a>       <span class="s3">apply the laws of different jurisdictions. You agree that any disputes</span>
+<a name="l260"><span class="ln">260  </span></a>       <span class="s3">regarding this website and the Unicode Products shall be resolved</span>
+<a name="l261"><span class="ln">261  </span></a>       <span class="s3">solely in the appropriate state and federal courts located in the</span>
+<a name="l262"><span class="ln">262  </span></a>       <span class="s3">counties of San Francisco, San Mateo, or Santa Clara, California.</span>
+<a name="l263"><span class="ln">263  </span></a>       <span class="s3">You agree that these courts have personal jurisdiction over you and</span>
+<a name="l264"><span class="ln">264  </span></a>       <span class="s3">agree to waive any right to transfer the dispute to any other forum.</span>
+<a name="l265"><span class="ln">265  </span></a>
+<a name="l266"><span class="ln">266  </span></a>    <span class="s3">10. Severability. If any provision of these Terms of Use is declared</span>
+<a name="l267"><span class="ln">267  </span></a>        <span class="s3">invalid or unenforceable, the remaining provisions of these Terms of</span>
+<a name="l268"><span class="ln">268  </span></a>        <span class="s3">Use shall remain in effect.</span>
+<a name="l269"><span class="ln">269  </span></a>
+<a name="l270"><span class="ln">270  </span></a></pre>
+</body>
+</html>

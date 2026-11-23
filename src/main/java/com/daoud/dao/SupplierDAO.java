@@ -209,18 +209,22 @@ public class SupplierDAO {
         }
     }
 
+    /**
+     * رصيد حساب الشغل بتاع المورد (منفصل تمامًا عن الأرضية — الأرضية حساب
+     * مستقل بيتغير لوحده عن طريق FloorDAO ومتضفش هنا بنفس قيمتها، بس لو
+     * عم داود سدد للمورد *من* رصيد الأرضية فده بيتحسب هنا كسداد جزء من
+     * الرصيد — بالظبط زي لو كان سدده كاش من الخزنة، فرق الطريقة بس).
+     *
+     * الرصيد = (إجمالي اللي اتسحب للمورد كاش + إجمالي اللي اتسدد من الأرضية)
+     *          − إجمالي قيمة البضاعة اللي وردها.
+     *   سالب = عم داود لسه مديون للمورد (استلم بضاعة ولسه مسددهاش).
+     *   موجب = المورد مديون لعم داود (اتسحب له أكتر من قيمة البضاعة).
+     */
     public static double getSupplierBalance(int supplierId) {
-        double floor = 0;
         double totalPurchases = 0;
         double totalWithdrawals = 0;
 
         try (Connection conn = DatabaseManager_online.getConnection()) {
-            PreparedStatement fs = conn.prepareStatement(
-                    "SELECT floor_amount FROM suppliers WHERE id = ?");
-            fs.setInt(1, supplierId);
-            ResultSet frs = fs.executeQuery();
-            if (frs.next()) floor = frs.getDouble("floor_amount");
-
             PreparedStatement ps = conn.prepareStatement(
                     "SELECT COALESCE(SUM((gross_weight - deduction_kg) * price_per_kg), 0) FROM supplier_transactions WHERE supplier_id = ?");
             ps.setInt(1, supplierId);
@@ -233,11 +237,19 @@ public class SupplierDAO {
             ResultSet wrs = ws.executeQuery();
             if (wrs.next()) totalWithdrawals = wrs.getDouble(1);
 
+            // سداد من رصيد الأرضية: بيخصم من الأرضية نفسها (FloorDAO) وكمان
+            // بيتحسب هنا كسداد لجزء من رصيد حساب الشغل.
+            PreparedStatement flrs = conn.prepareStatement(
+                    "SELECT COALESCE(SUM(amount), 0) FROM supplier_floor_transactions WHERE supplier_id = ? AND direction = 'out'");
+            flrs.setInt(1, supplierId);
+            ResultSet flrrs = flrs.executeQuery();
+            if (flrrs.next()) totalWithdrawals += flrrs.getDouble(1);
+
         } catch (SQLException e) {
             System.err.println("Error: " + e.getMessage());
         }
 
-        return floor - totalPurchases + totalWithdrawals;
+        return totalWithdrawals - totalPurchases;
     }
 
     public static void settleSupplier(int supplierId, double amountPaid, double newFloor, int userId) {

@@ -342,7 +342,7 @@ public class FactoryDetailContent {
             editBtn.setOnAction(e -> {
                 if (finalRow.type().equals("شحنة")) {
                     TextField gf = new TextField(); gf.setPromptText("الوزن الإجمالي");
-                    TextField df = new TextField(); df.setPromptText("كمية الخصم");
+                    TextField df = new TextField(); df.setPromptText("نسبة الخصم %");
                     TextField pf = new TextField(); pf.setPromptText("سعر الكيلو");
                     TextField sf = new TextField(); sf.setPromptText("اسم المورد");
                     Button saveEdit = new Button("حفظ"); saveEdit.getStyleClass().add("btn-primary");
@@ -353,11 +353,11 @@ public class FactoryDetailContent {
                             () -> {
                                 try (Connection conn = DatabaseManager_online.getConnection();
                                      PreparedStatement stmt = conn.prepareStatement(
-                                             "SELECT gross_weight, deduction_kg, price_per_kg, supplier_name FROM factory_shipments WHERE id = ?")) {
+                                             "SELECT gross_weight, deduction_pct, price_per_kg FROM factory_shipments WHERE id = ?")) {
                                     stmt.setInt(1, finalRow.recordId());
                                     ResultSet rs = stmt.executeQuery();
                                     if (rs.next()) {
-                                        return new double[]{rs.getDouble("gross_weight"), rs.getDouble("deduction_kg"), rs.getDouble("price_per_kg")};
+                                        return new double[]{rs.getDouble("gross_weight"), rs.getDouble("deduction_pct"), rs.getDouble("price_per_kg")};
                                     }
                                 }
                                 return null;
@@ -376,10 +376,10 @@ public class FactoryDetailContent {
                     saveEdit.setOnAction(ev -> {
                         try {
                             double g = Double.parseDouble(gf.getText().trim());
-                            double d = Double.parseDouble(df.getText().trim());
+                            double pct = Double.parseDouble(df.getText().trim());
                             double p = Double.parseDouble(pf.getText().trim());
+                            double d = g * (pct / 100.0);
                             double net = g - d;
-                            double pct = g > 0 ? (d / g * 100) : 0;
                             double total = net * p;
                             String supplierName = sf.getText().trim();
 
@@ -408,7 +408,7 @@ public class FactoryDetailContent {
 
                     VBox dl = new VBox(10,
                             new Label("الوزن الإجمالي:"), gf,
-                            new Label("كمية الخصم:"), df,
+                            new Label("نسبة الخصم %:"), df,
                             new Label("سعر الكيلو:"), pf,
                             new Label("المورد:"), sf,
                             saveEdit, errLbl);

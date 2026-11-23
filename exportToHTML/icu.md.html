@@ -1,0 +1,114 @@
+<html>
+<head>
+<title>icu.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+icu.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">International Components for Unicode </span><span class="s1">(</span><span class="s2">ICU4J</span><span class="s1">) </span><span class="s2">v78.1</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">ICU4J License</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s0">```</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s3">UNICODE LICENSE V3</span>
+<a name="l6"><span class="ln">6    </span></a>
+<a name="l7"><span class="ln">7    </span></a><span class="s3">COPYRIGHT AND PERMISSION NOTICE</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a><span class="s3">Copyright © 2016-2025 Unicode, Inc.</span>
+<a name="l10"><span class="ln">10   </span></a>
+<a name="l11"><span class="ln">11   </span></a><span class="s3">NOTICE TO USER: Carefully read the following legal agreement. BY</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s3">DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s3">SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE</span>
+<a name="l14"><span class="ln">14   </span></a><span class="s3">TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s3">DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.</span>
+<a name="l16"><span class="ln">16   </span></a>
+<a name="l17"><span class="ln">17   </span></a><span class="s3">Permission is hereby granted, free of charge, to any person obtaining a</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s3">copy of data files and any associated documentation (the &quot;Data Files&quot;) or</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s3">software and any associated documentation (the &quot;Software&quot;) to deal in the</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s3">Data Files or Software without restriction, including without limitation</span>
+<a name="l21"><span class="ln">21   </span></a><span class="s3">the rights to use, copy, modify, merge, publish, distribute, and/or sell</span>
+<a name="l22"><span class="ln">22   </span></a><span class="s3">copies of the Data Files or Software, and to permit persons to whom the</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s3">Data Files or Software are furnished to do so, provided that either (a)</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s3">this copyright and permission notice appear with all copies of the Data</span>
+<a name="l25"><span class="ln">25   </span></a><span class="s3">Files or Software, or (b) this copyright and permission notice appear in</span>
+<a name="l26"><span class="ln">26   </span></a><span class="s3">associated Documentation.</span>
+<a name="l27"><span class="ln">27   </span></a>
+<a name="l28"><span class="ln">28   </span></a><span class="s3">THE DATA FILES AND SOFTWARE ARE PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY</span>
+<a name="l29"><span class="ln">29   </span></a><span class="s3">KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF</span>
+<a name="l30"><span class="ln">30   </span></a><span class="s3">MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s3">THIRD PARTY RIGHTS.</span>
+<a name="l32"><span class="ln">32   </span></a>
+<a name="l33"><span class="ln">33   </span></a><span class="s3">IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s3">BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s3">OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,</span>
+<a name="l36"><span class="ln">36   </span></a><span class="s3">WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s3">ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s3">FILES OR SOFTWARE.</span>
+<a name="l39"><span class="ln">39   </span></a>
+<a name="l40"><span class="ln">40   </span></a><span class="s3">Except as contained in this notice, the name of a copyright holder shall</span>
+<a name="l41"><span class="ln">41   </span></a><span class="s3">not be used in advertising or otherwise to promote the sale, use or other</span>
+<a name="l42"><span class="ln">42   </span></a><span class="s3">dealings in these Data Files or Software without prior written</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s3">authorization of the copyright holder.</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a><span class="s3">SPDX-License-Identifier: Unicode-3.0</span>
+<a name="l46"><span class="ln">46   </span></a>
+<a name="l47"><span class="ln">47   </span></a><span class="s3">----------------------------------------------------------------------</span>
+<a name="l48"><span class="ln">48   </span></a>
+<a name="l49"><span class="ln">49   </span></a><span class="s3">Third-Party Software Licenses</span>
+<a name="l50"><span class="ln">50   </span></a>
+<a name="l51"><span class="ln">51   </span></a><span class="s3">This section contains third-party software notices and/or additional</span>
+<a name="l52"><span class="ln">52   </span></a><span class="s3">terms for licensed third-party software components included within ICU</span>
+<a name="l53"><span class="ln">53   </span></a><span class="s3">libraries.</span>
+<a name="l54"><span class="ln">54   </span></a>
+<a name="l55"><span class="ln">55   </span></a><span class="s3">----------------------------------------------------------------------</span>
+<a name="l56"><span class="ln">56   </span></a>
+<a name="l57"><span class="ln">57   </span></a><span class="s3">ICU License - ICU 1.8.1 to ICU 57.1</span>
+<a name="l58"><span class="ln">58   </span></a>
+<a name="l59"><span class="ln">59   </span></a><span class="s3">COPYRIGHT AND PERMISSION NOTICE</span>
+<a name="l60"><span class="ln">60   </span></a>
+<a name="l61"><span class="ln">61   </span></a><span class="s3">Copyright (c) 1995-2016 International Business Machines Corporation and others</span>
+<a name="l62"><span class="ln">62   </span></a><span class="s3">All rights reserved.</span>
+<a name="l63"><span class="ln">63   </span></a>
+<a name="l64"><span class="ln">64   </span></a><span class="s3">Permission is hereby granted, free of charge, to any person obtaining</span>
+<a name="l65"><span class="ln">65   </span></a><span class="s3">a copy of this software and associated documentation files (the</span>
+<a name="l66"><span class="ln">66   </span></a><span class="s3">&quot;Software&quot;), to deal in the Software without restriction, including</span>
+<a name="l67"><span class="ln">67   </span></a><span class="s3">without limitation the rights to use, copy, modify, merge, publish,</span>
+<a name="l68"><span class="ln">68   </span></a><span class="s3">distribute, and/or sell copies of the Software, and to permit persons</span>
+<a name="l69"><span class="ln">69   </span></a><span class="s3">to whom the Software is furnished to do so, provided that the above</span>
+<a name="l70"><span class="ln">70   </span></a><span class="s3">copyright notice(s) and this permission notice appear in all copies of</span>
+<a name="l71"><span class="ln">71   </span></a><span class="s3">the Software and that both the above copyright notice(s) and this</span>
+<a name="l72"><span class="ln">72   </span></a><span class="s3">permission notice appear in supporting documentation.</span>
+<a name="l73"><span class="ln">73   </span></a>
+<a name="l74"><span class="ln">74   </span></a><span class="s3">THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,</span>
+<a name="l75"><span class="ln">75   </span></a><span class="s3">EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF</span>
+<a name="l76"><span class="ln">76   </span></a><span class="s3">MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT</span>
+<a name="l77"><span class="ln">77   </span></a><span class="s3">OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR</span>
+<a name="l78"><span class="ln">78   </span></a><span class="s3">HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY</span>
+<a name="l79"><span class="ln">79   </span></a><span class="s3">SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER</span>
+<a name="l80"><span class="ln">80   </span></a><span class="s3">RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF</span>
+<a name="l81"><span class="ln">81   </span></a><span class="s3">CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN</span>
+<a name="l82"><span class="ln">82   </span></a><span class="s3">CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
+<a name="l83"><span class="ln">83   </span></a>
+<a name="l84"><span class="ln">84   </span></a><span class="s3">Except as contained in this notice, the name of a copyright holder</span>
+<a name="l85"><span class="ln">85   </span></a><span class="s3">shall not be used in advertising or otherwise to promote the sale, use</span>
+<a name="l86"><span class="ln">86   </span></a><span class="s3">or other dealings in this Software without prior written authorization</span>
+<a name="l87"><span class="ln">87   </span></a><span class="s3">of the copyright holder.</span>
+<a name="l88"><span class="ln">88   </span></a>
+<a name="l89"><span class="ln">89   </span></a><span class="s3">All trademarks and registered trademarks mentioned herein are the</span>
+<a name="l90"><span class="ln">90   </span></a><span class="s3">property of their respective owners.</span>
+<a name="l91"><span class="ln">91   </span></a>
+<a name="l92"><span class="ln">92   </span></a><span class="s0">```</span>
+<a name="l93"><span class="ln">93   </span></a>
+<a name="l94"><span class="ln">94   </span></a></pre>
+</body>
+</html>

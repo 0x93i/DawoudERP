@@ -1,0 +1,171 @@
+<html>
+<head>
+<title>siphash.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+siphash.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">SipHash v1.0-68c8a7c</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">Notice</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s2">SipHash reference C implementation</span>
+<a name="l5"><span class="ln">5    </span></a>
+<a name="l6"><span class="ln">6    </span></a><span class="s0">```</span>
+<a name="l7"><span class="ln">7    </span></a>   <span class="s3">Copyright (c) 2016 Jean-Philippe Aumasson &lt;jeanphilippe.aumasson@gmail.com&gt;</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a>   <span class="s3">To the extent possible under law, the author(s) have dedicated all copyright</span>
+<a name="l10"><span class="ln">10   </span></a>   <span class="s3">and related and neighboring rights to this software to the public domain</span>
+<a name="l11"><span class="ln">11   </span></a>   <span class="s3">worldwide. This software is distributed without any warranty.</span>
+<a name="l12"><span class="ln">12   </span></a>
+<a name="l13"><span class="ln">13   </span></a>   <span class="s3">You should have received a copy of the CC0 Public Domain Dedication along</span>
+<a name="l14"><span class="ln">14   </span></a>   <span class="s3">with</span>
+<a name="l15"><span class="ln">15   </span></a>   <span class="s3">this software. If not, see</span>
+<a name="l16"><span class="ln">16   </span></a>   <span class="s3">&lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<a name="l17"><span class="ln">17   </span></a><span class="s0">```</span>
+<a name="l18"><span class="ln">18   </span></a>
+<a name="l19"><span class="ln">19   </span></a><span class="s0">### </span><span class="s2">Licenses</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s2">The code is dual-licensed CCO and MIT</span>
+<a name="l21"><span class="ln">21   </span></a>
+<a name="l22"><span class="ln">22   </span></a><span class="s0">#### </span><span class="s2">MIT License</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s0">```</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s3">Copyright 2012-2024 JP Aumasson</span>
+<a name="l25"><span class="ln">25   </span></a>
+<a name="l26"><span class="ln">26   </span></a><span class="s3">Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</span>
+<a name="l27"><span class="ln">27   </span></a>
+<a name="l28"><span class="ln">28   </span></a><span class="s3">The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</span>
+<a name="l29"><span class="ln">29   </span></a>
+<a name="l30"><span class="ln">30   </span></a><span class="s3">THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s0">```</span>
+<a name="l32"><span class="ln">32   </span></a>
+<a name="l33"><span class="ln">33   </span></a><span class="s0">#### </span><span class="s2">CC0 1.0 Universal</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s0">```</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s3">Statement of Purpose</span>
+<a name="l36"><span class="ln">36   </span></a>
+<a name="l37"><span class="ln">37   </span></a><span class="s3">The laws of most jurisdictions throughout the world automatically confer</span>
+<a name="l38"><span class="ln">38   </span></a><span class="s3">exclusive Copyright and Related Rights (defined below) upon the creator and</span>
+<a name="l39"><span class="ln">39   </span></a><span class="s3">subsequent owner(s) (each and all, an &quot;owner&quot;) of an original work of</span>
+<a name="l40"><span class="ln">40   </span></a><span class="s3">authorship and/or a database (each, a &quot;Work&quot;).</span>
+<a name="l41"><span class="ln">41   </span></a>
+<a name="l42"><span class="ln">42   </span></a><span class="s3">Certain owners wish to permanently relinquish those rights to a Work for the</span>
+<a name="l43"><span class="ln">43   </span></a><span class="s3">purpose of contributing to a commons of creative, cultural and scientific</span>
+<a name="l44"><span class="ln">44   </span></a><span class="s3">works (&quot;Commons&quot;) that the public can reliably and without fear of later</span>
+<a name="l45"><span class="ln">45   </span></a><span class="s3">claims of infringement build upon, modify, incorporate in other works, reuse</span>
+<a name="l46"><span class="ln">46   </span></a><span class="s3">and redistribute as freely as possible in any form whatsoever and for any</span>
+<a name="l47"><span class="ln">47   </span></a><span class="s3">purposes, including without limitation commercial purposes. These owners may</span>
+<a name="l48"><span class="ln">48   </span></a><span class="s3">contribute to the Commons to promote the ideal of a free culture and the</span>
+<a name="l49"><span class="ln">49   </span></a><span class="s3">further production of creative, cultural and scientific works, or to gain</span>
+<a name="l50"><span class="ln">50   </span></a><span class="s3">reputation or greater distribution for their Work in part through the use and</span>
+<a name="l51"><span class="ln">51   </span></a><span class="s3">efforts of others.</span>
+<a name="l52"><span class="ln">52   </span></a>
+<a name="l53"><span class="ln">53   </span></a><span class="s3">For these and/or other purposes and motivations, and without any expectation</span>
+<a name="l54"><span class="ln">54   </span></a><span class="s3">of additional consideration or compensation, the person associating CC0 with a</span>
+<a name="l55"><span class="ln">55   </span></a><span class="s3">Work (the &quot;Affirmer&quot;), to the extent that he or she is an owner of Copyright</span>
+<a name="l56"><span class="ln">56   </span></a><span class="s3">and Related Rights in the Work, voluntarily elects to apply CC0 to the Work</span>
+<a name="l57"><span class="ln">57   </span></a><span class="s3">and publicly distribute the Work under its terms, with knowledge of his or her</span>
+<a name="l58"><span class="ln">58   </span></a><span class="s3">Copyright and Related Rights in the Work and the meaning and intended legal</span>
+<a name="l59"><span class="ln">59   </span></a><span class="s3">effect of CC0 on those rights.</span>
+<a name="l60"><span class="ln">60   </span></a>
+<a name="l61"><span class="ln">61   </span></a><span class="s3">1. Copyright and Related Rights. A Work made available under CC0 may be</span>
+<a name="l62"><span class="ln">62   </span></a><span class="s3">protected by copyright and related or neighboring rights (&quot;Copyright and</span>
+<a name="l63"><span class="ln">63   </span></a><span class="s3">Related Rights&quot;). Copyright and Related Rights include, but are not limited</span>
+<a name="l64"><span class="ln">64   </span></a><span class="s3">to, the following:</span>
+<a name="l65"><span class="ln">65   </span></a>
+<a name="l66"><span class="ln">66   </span></a>  <span class="s3">i. the right to reproduce, adapt, distribute, perform, display, communicate,</span>
+<a name="l67"><span class="ln">67   </span></a>  <span class="s3">and translate a Work;</span>
+<a name="l68"><span class="ln">68   </span></a>
+<a name="l69"><span class="ln">69   </span></a>  <span class="s3">ii. moral rights retained by the original author(s) and/or performer(s);</span>
+<a name="l70"><span class="ln">70   </span></a>
+<a name="l71"><span class="ln">71   </span></a>  <span class="s3">iii. publicity and privacy rights pertaining to a person's image or likeness</span>
+<a name="l72"><span class="ln">72   </span></a>  <span class="s3">depicted in a Work;</span>
+<a name="l73"><span class="ln">73   </span></a>
+<a name="l74"><span class="ln">74   </span></a>  <span class="s3">iv. rights protecting against unfair competition in regards to a Work,</span>
+<a name="l75"><span class="ln">75   </span></a>  <span class="s3">subject to the limitations in paragraph 4(a), below;</span>
+<a name="l76"><span class="ln">76   </span></a>
+<a name="l77"><span class="ln">77   </span></a>  <span class="s3">v. rights protecting the extraction, dissemination, use and reuse of data in</span>
+<a name="l78"><span class="ln">78   </span></a>  <span class="s3">a Work;</span>
+<a name="l79"><span class="ln">79   </span></a>
+<a name="l80"><span class="ln">80   </span></a>  <span class="s3">vi. database rights (such as those arising under Directive 96/9/EC of the</span>
+<a name="l81"><span class="ln">81   </span></a>  <span class="s3">European Parliament and of the Council of 11 March 1996 on the legal</span>
+<a name="l82"><span class="ln">82   </span></a>  <span class="s3">protection of databases, and under any national implementation thereof,</span>
+<a name="l83"><span class="ln">83   </span></a>  <span class="s3">including any amended or successor version of such directive); and</span>
+<a name="l84"><span class="ln">84   </span></a>
+<a name="l85"><span class="ln">85   </span></a>  <span class="s3">vii. other similar, equivalent or corresponding rights throughout the world</span>
+<a name="l86"><span class="ln">86   </span></a>  <span class="s3">based on applicable law or treaty, and any national implementations thereof.</span>
+<a name="l87"><span class="ln">87   </span></a>
+<a name="l88"><span class="ln">88   </span></a><span class="s3">2. Waiver. To the greatest extent permitted by, but not in contravention of,</span>
+<a name="l89"><span class="ln">89   </span></a><span class="s3">applicable law, Affirmer hereby overtly, fully, permanently, irrevocably and</span>
+<a name="l90"><span class="ln">90   </span></a><span class="s3">unconditionally waives, abandons, and surrenders all of Affirmer's Copyright</span>
+<a name="l91"><span class="ln">91   </span></a><span class="s3">and Related Rights and associated claims and causes of action, whether now</span>
+<a name="l92"><span class="ln">92   </span></a><span class="s3">known or unknown (including existing as well as future claims and causes of</span>
+<a name="l93"><span class="ln">93   </span></a><span class="s3">action), in the Work (i) in all territories worldwide, (ii) for the maximum</span>
+<a name="l94"><span class="ln">94   </span></a><span class="s3">duration provided by applicable law or treaty (including future time</span>
+<a name="l95"><span class="ln">95   </span></a><span class="s3">extensions), (iii) in any current or future medium and for any number of</span>
+<a name="l96"><span class="ln">96   </span></a><span class="s3">copies, and (iv) for any purpose whatsoever, including without limitation</span>
+<a name="l97"><span class="ln">97   </span></a><span class="s3">commercial, advertising or promotional purposes (the &quot;Waiver&quot;). Affirmer makes</span>
+<a name="l98"><span class="ln">98   </span></a><span class="s3">the Waiver for the benefit of each member of the public at large and to the</span>
+<a name="l99"><span class="ln">99   </span></a><span class="s3">detriment of Affirmer's heirs and successors, fully intending that such Waiver</span>
+<a name="l100"><span class="ln">100  </span></a><span class="s3">shall not be subject to revocation, rescission, cancellation, termination, or</span>
+<a name="l101"><span class="ln">101  </span></a><span class="s3">any other legal or equitable action to disrupt the quiet enjoyment of the Work</span>
+<a name="l102"><span class="ln">102  </span></a><span class="s3">by the public as contemplated by Affirmer's express Statement of Purpose.</span>
+<a name="l103"><span class="ln">103  </span></a>
+<a name="l104"><span class="ln">104  </span></a><span class="s3">3. Public License Fallback. Should any part of the Waiver for any reason be</span>
+<a name="l105"><span class="ln">105  </span></a><span class="s3">judged legally invalid or ineffective under applicable law, then the Waiver</span>
+<a name="l106"><span class="ln">106  </span></a><span class="s3">shall be preserved to the maximum extent permitted taking into account</span>
+<a name="l107"><span class="ln">107  </span></a><span class="s3">Affirmer's express Statement of Purpose. In addition, to the extent the Waiver</span>
+<a name="l108"><span class="ln">108  </span></a><span class="s3">is so judged Affirmer hereby grants to each affected person a royalty-free,</span>
+<a name="l109"><span class="ln">109  </span></a><span class="s3">non transferable, non sublicensable, non exclusive, irrevocable and</span>
+<a name="l110"><span class="ln">110  </span></a><span class="s3">unconditional license to exercise Affirmer's Copyright and Related Rights in</span>
+<a name="l111"><span class="ln">111  </span></a><span class="s3">the Work (i) in all territories worldwide, (ii) for the maximum duration</span>
+<a name="l112"><span class="ln">112  </span></a><span class="s3">provided by applicable law or treaty (including future time extensions), (iii)</span>
+<a name="l113"><span class="ln">113  </span></a><span class="s3">in any current or future medium and for any number of copies, and (iv) for any</span>
+<a name="l114"><span class="ln">114  </span></a><span class="s3">purpose whatsoever, including without limitation commercial, advertising or</span>
+<a name="l115"><span class="ln">115  </span></a><span class="s3">promotional purposes (the &quot;License&quot;). The License shall be deemed effective as</span>
+<a name="l116"><span class="ln">116  </span></a><span class="s3">of the date CC0 was applied by Affirmer to the Work. Should any part of the</span>
+<a name="l117"><span class="ln">117  </span></a><span class="s3">License for any reason be judged legally invalid or ineffective under</span>
+<a name="l118"><span class="ln">118  </span></a><span class="s3">applicable law, such partial invalidity or ineffectiveness shall not</span>
+<a name="l119"><span class="ln">119  </span></a><span class="s3">invalidate the remainder of the License, and in such case Affirmer hereby</span>
+<a name="l120"><span class="ln">120  </span></a><span class="s3">affirms that he or she will not (i) exercise any of his or her remaining</span>
+<a name="l121"><span class="ln">121  </span></a><span class="s3">Copyright and Related Rights in the Work or (ii) assert any associated claims</span>
+<a name="l122"><span class="ln">122  </span></a><span class="s3">and causes of action with respect to the Work, in either case contrary to</span>
+<a name="l123"><span class="ln">123  </span></a><span class="s3">Affirmer's express Statement of Purpose.</span>
+<a name="l124"><span class="ln">124  </span></a>
+<a name="l125"><span class="ln">125  </span></a><span class="s3">4. Limitations and Disclaimers.</span>
+<a name="l126"><span class="ln">126  </span></a>
+<a name="l127"><span class="ln">127  </span></a>  <span class="s3">a. No trademark or patent rights held by Affirmer are waived, abandoned,</span>
+<a name="l128"><span class="ln">128  </span></a>  <span class="s3">surrendered, licensed or otherwise affected by this document.</span>
+<a name="l129"><span class="ln">129  </span></a>
+<a name="l130"><span class="ln">130  </span></a>  <span class="s3">b. Affirmer offers the Work as-is and makes no representations or warranties</span>
+<a name="l131"><span class="ln">131  </span></a>  <span class="s3">of any kind concerning the Work, express, implied, statutory or otherwise,</span>
+<a name="l132"><span class="ln">132  </span></a>  <span class="s3">including without limitation warranties of title, merchantability, fitness</span>
+<a name="l133"><span class="ln">133  </span></a>  <span class="s3">for a particular purpose, non infringement, or the absence of latent or</span>
+<a name="l134"><span class="ln">134  </span></a>  <span class="s3">other defects, accuracy, or the present or absence of errors, whether or not</span>
+<a name="l135"><span class="ln">135  </span></a>  <span class="s3">discoverable, all to the greatest extent permissible under applicable law.</span>
+<a name="l136"><span class="ln">136  </span></a>
+<a name="l137"><span class="ln">137  </span></a>  <span class="s3">c. Affirmer disclaims responsibility for clearing rights of other persons</span>
+<a name="l138"><span class="ln">138  </span></a>  <span class="s3">that may apply to the Work or any use thereof, including without limitation</span>
+<a name="l139"><span class="ln">139  </span></a>  <span class="s3">any person's Copyright and Related Rights in the Work. Further, Affirmer</span>
+<a name="l140"><span class="ln">140  </span></a>  <span class="s3">disclaims responsibility for obtaining any necessary consents, permissions</span>
+<a name="l141"><span class="ln">141  </span></a>  <span class="s3">or other rights required for any use of the Work.</span>
+<a name="l142"><span class="ln">142  </span></a>
+<a name="l143"><span class="ln">143  </span></a>  <span class="s3">d. Affirmer understands and acknowledges that Creative Commons is not a</span>
+<a name="l144"><span class="ln">144  </span></a>  <span class="s3">party to this document and has no duty or obligation with respect to this</span>
+<a name="l145"><span class="ln">145  </span></a>  <span class="s3">CC0 or use of the Work.</span>
+<a name="l146"><span class="ln">146  </span></a>
+<a name="l147"><span class="ln">147  </span></a><span class="s3">For more information, please see</span>
+<a name="l148"><span class="ln">148  </span></a><span class="s3">&lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;</span>
+<a name="l149"><span class="ln">149  </span></a>
+<a name="l150"><span class="ln">150  </span></a><span class="s0">```</span>
+<a name="l151"><span class="ln">151  </span></a></pre>
+</body>
+</html>

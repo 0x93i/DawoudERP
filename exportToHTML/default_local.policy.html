@@ -1,0 +1,24 @@
+<html>
+<head>
+<title>default_local.policy</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+default_local.policy</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">// Country-specific policy file for countries with no limits on crypto strength.</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">grant {</span>
+<a name="l4"><span class="ln">4    </span></a>    <span class="s0">// There is no restriction to any algorithms.</span>
+<a name="l5"><span class="ln">5    </span></a>    <span class="s0">permission javax.crypto.CryptoAllPermission; </span>
+<a name="l6"><span class="ln">6    </span></a><span class="s0">};</span>
+<a name="l7"><span class="ln">7    </span></a></pre>
+</body>
+</html>

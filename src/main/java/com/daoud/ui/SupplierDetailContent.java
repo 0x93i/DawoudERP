@@ -379,7 +379,9 @@ public class SupplierDetailContent {
             }
         } catch (SQLException e) { System.err.println(e.getMessage()); }
 
-        // سحوبات "من رصيد الأرضية" — بتظهر هنا للعرض بس، ومش داخلة في حساب الرصيد فوق
+        // سحوبات "من رصيد الأرضية" — بتظهر هنا وكمان بتتحسب في الرصيد فوق
+        // (SupplierDAO.getSupplierBalance) كسداد جزء من الرصيد، بالظبط زي
+        // أي سحب كاش عادي، غير إنها بتخصم من الأرضية هي كمان بدل الخزنة.
         for (com.daoud.dao.FloorDAO.FloorTransaction ft : com.daoud.dao.FloorDAO.getHistory(supplierId)) {
             if (!ft.direction().equals("out")) continue;
             rows.add(new HistoryRow("أرضية", ft.id(), ft.date(),

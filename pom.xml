@@ -41,6 +41,19 @@
             <artifactId>HikariCP</artifactId>
             <version>5.1.0</version>
         </dependency>
+        <!-- تصدير تقارير إكسيل حقيقية (.xlsx) بدل CSV، عشان الأعمدة تظهر
+             صح في إكسل/WPS مهما كانت إعدادات الفاصلة (,  أو ؛) على جهاز
+             المستخدم — مشكلة كانت بتحصل مع CSV. -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
     </dependencies>
 
     <build>

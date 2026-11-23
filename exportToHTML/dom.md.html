@@ -1,0 +1,97 @@
+<html>
+<head>
+<title>dom.md</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.ln { color: #4b5059; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+dom.md</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">## </span><span class="s2">DOM Level 3 Core Specification v1.0</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">### </span><span class="s2">W3C Software Notice</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s1">&lt;pre&gt;</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s1">Copyright © 2004 World Wide Web Consortium, (Massachusetts Institute of Technology,</span>
+<a name="l6"><span class="ln">6    </span></a><span class="s1">European Research Consortium for Informatics and Mathematics, Keio University).</span>
+<a name="l7"><span class="ln">7    </span></a><span class="s1">All Rights Reserved.</span>
+<a name="l8"><span class="ln">8    </span></a>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">The DOM bindings are published under the W3C Software Copyright Notice and License.</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s1">The software license requires &quot;Notice of any changes or modifications to the W3C</span>
+<a name="l11"><span class="ln">11   </span></a><span class="s1">files, including the date changes were made.&quot; Consequently, modified versions of</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s1">the DOM bindings must document that they do not conform to the W3C standard; in the</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s1">case of the IDL definitions, the pragma prefix can no longer be 'w3c.org'; in the</span>
+<a name="l14"><span class="ln">14   </span></a><span class="s1">case of the Java language binding, the package names can no longer be in the</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">'org.w3c' package.</span>
+<a name="l16"><span class="ln">16   </span></a><span class="s1">&lt;/pre&gt;</span>
+<a name="l17"><span class="ln">17   </span></a>
+<a name="l18"><span class="ln">18   </span></a><span class="s0">### </span><span class="s2">W3C License</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s1">&lt;pre&gt;</span>
+<a name="l20"><span class="ln">20   </span></a>
+<a name="l21"><span class="ln">21   </span></a><span class="s1">W3C SOFTWARE NOTICE AND LICENSE</span>
+<a name="l22"><span class="ln">22   </span></a>
+<a name="l23"><span class="ln">23   </span></a><span class="s1">http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231</span>
+<a name="l24"><span class="ln">24   </span></a>
+<a name="l25"><span class="ln">25   </span></a><span class="s1">This work (and included software, documentation such as READMEs, or other</span>
+<a name="l26"><span class="ln">26   </span></a><span class="s1">related items) is being provided by the copyright holders under the following</span>
+<a name="l27"><span class="ln">27   </span></a><span class="s1">license. By obtaining, using and/or copying this work, you (the licensee)</span>
+<a name="l28"><span class="ln">28   </span></a><span class="s1">agree that you have read, understood, and will comply with the following terms</span>
+<a name="l29"><span class="ln">29   </span></a><span class="s1">and conditions.</span>
+<a name="l30"><span class="ln">30   </span></a>
+<a name="l31"><span class="ln">31   </span></a><span class="s1">Permission to copy, modify, and distribute this software and its</span>
+<a name="l32"><span class="ln">32   </span></a><span class="s1">documentation, with or without modification, for any purpose and without fee</span>
+<a name="l33"><span class="ln">33   </span></a><span class="s1">or royalty is hereby granted, provided that you include the following on ALL</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s1">copies of the software and documentation or portions thereof, including</span>
+<a name="l35"><span class="ln">35   </span></a><span class="s1">modifications:</span>
+<a name="l36"><span class="ln">36   </span></a>
+<a name="l37"><span class="ln">37   </span></a>   <span class="s1">1.The full text of this NOTICE in a location viewable to users of the</span>
+<a name="l38"><span class="ln">38   </span></a>   <span class="s1">redistributed or derivative work.</span>
+<a name="l39"><span class="ln">39   </span></a>
+<a name="l40"><span class="ln">40   </span></a>   <span class="s1">2.Any pre-existing intellectual property disclaimers, notices, or terms and</span>
+<a name="l41"><span class="ln">41   </span></a>   <span class="s1">conditions. If none exist, the W3C Software Short Notice should be included</span>
+<a name="l42"><span class="ln">42   </span></a>   <span class="s1">(hypertext is preferred, text is permitted) within the body of any</span>
+<a name="l43"><span class="ln">43   </span></a>   <span class="s1">redistributed or derivative code.</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a>   <span class="s1">3.Notice of any changes or modifications to the files, including the date</span>
+<a name="l46"><span class="ln">46   </span></a>   <span class="s1">changes were made. (We recommend you provide URIs to the location from</span>
+<a name="l47"><span class="ln">47   </span></a>   <span class="s1">which the code is derived.)</span>
+<a name="l48"><span class="ln">48   </span></a>
+<a name="l49"><span class="ln">49   </span></a><span class="s1">THIS SOFTWARE AND DOCUMENTATION IS PROVIDED &quot;AS IS,&quot; AND COPYRIGHT HOLDERS</span>
+<a name="l50"><span class="ln">50   </span></a><span class="s1">MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT</span>
+<a name="l51"><span class="ln">51   </span></a><span class="s1">LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR</span>
+<a name="l52"><span class="ln">52   </span></a><span class="s1">PURPOSE OR THAT THE USE OF THE SOFTWARE OR DOCUMENTATION WILL NOT INFRINGE ANY</span>
+<a name="l53"><span class="ln">53   </span></a><span class="s1">THIRD PARTY PATENTS,COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.</span>
+<a name="l54"><span class="ln">54   </span></a>
+<a name="l55"><span class="ln">55   </span></a><span class="s1">COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL</span>
+<a name="l56"><span class="ln">56   </span></a><span class="s1">OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR</span>
+<a name="l57"><span class="ln">57   </span></a><span class="s1">DOCUMENTATION.  The name and trademarks of copyright holders may NOT be used</span>
+<a name="l58"><span class="ln">58   </span></a><span class="s1">in advertising or publicity pertaining to the software without specific,</span>
+<a name="l59"><span class="ln">59   </span></a><span class="s1">written prior permission. Title to copyright in this software and any</span>
+<a name="l60"><span class="ln">60   </span></a><span class="s1">associated documentation will at all times remain with copyright holders.</span>
+<a name="l61"><span class="ln">61   </span></a>
+<a name="l62"><span class="ln">62   </span></a><span class="s1">____________________________________</span>
+<a name="l63"><span class="ln">63   </span></a>
+<a name="l64"><span class="ln">64   </span></a><span class="s1">This formulation of W3C's notice and license became active on December 31</span>
+<a name="l65"><span class="ln">65   </span></a><span class="s1">2002. This version removes the copyright ownership notice such that this</span>
+<a name="l66"><span class="ln">66   </span></a><span class="s1">license can be used with materials other than those owned by the W3C, reflects</span>
+<a name="l67"><span class="ln">67   </span></a><span class="s1">that ERCIM is now a host of the W3C, includes references to this specific</span>
+<a name="l68"><span class="ln">68   </span></a><span class="s1">dated version of the license, and removes the ambiguous grant of &quot;use&quot;.</span>
+<a name="l69"><span class="ln">69   </span></a><span class="s1">Otherwise, this version is the same as the previous version and is written so</span>
+<a name="l70"><span class="ln">70   </span></a><span class="s1">as to preserve the Free Software Foundation's assessment of GPL compatibility</span>
+<a name="l71"><span class="ln">71   </span></a><span class="s1">and OSI's certification under the Open Source Definition. Please see our</span>
+<a name="l72"><span class="ln">72   </span></a><span class="s1">Copyright FAQ for common questions about using materials from our site,</span>
+<a name="l73"><span class="ln">73   </span></a><span class="s1">including specific terms and conditions for packages like libwww, Amaya, and</span>
+<a name="l74"><span class="ln">74   </span></a><span class="s1">Jigsaw. Other questions about this notice can be directed to</span>
+<a name="l75"><span class="ln">75   </span></a><span class="s1">site-policy@w3.org.</span>
+<a name="l76"><span class="ln">76   </span></a>
+<a name="l77"><span class="ln">77   </span></a><span class="s1">&lt;/pre&gt;</span>
+<a name="l78"><span class="ln">78   </span></a></pre>
+</body>
+</html>
